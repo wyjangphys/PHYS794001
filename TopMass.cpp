@@ -208,9 +208,9 @@ void TopMass::Loop()
     ///////////////////////////////////////////////////
     if( this->MuonEleTriggerRequirement() == 1 )
     {
-      cout << "MuonEleTriggerRequirement == 1" << endl;
-      cout << "Elec_Count = " << Elec_Count << endl;
-      cout << "Muon_Count = " << Muon_Count << endl;
+      //cout << "MuonEleTriggerRequirement == 1" << endl;
+      //cout << "Elec_Count = " << Elec_Count << endl;
+      //cout << "Muon_Count = " << Muon_Count << endl;
       int nMuonEle = 0;
       int nEle = 0;
       int nMuon = 0;
@@ -238,8 +238,8 @@ void TopMass::Loop()
         }
       }
 
-      cout << "Invariant mass table" << Form(" / Selected %d electrons and %d muons", nEle, nMuon) << endl;
-      cout << "[i, j] / Invariant Mass [GeV]" << endl;
+      //cout << "Invariant mass table" << Form(" / Selected %d electrons and %d muons", nEle, nMuon) << endl;
+      //cout << "[i, j] / Invariant Mass [GeV]" << endl;
       for( int i = 0; i < nEle; i++ )
       {
         TLorentzVector* ele_i  = (TLorentzVector*)Elec->At(selectedEleIdx.at(i));
@@ -248,13 +248,13 @@ void TopMass::Loop()
           TLorentzVector dilep;
           TLorentzVector* muon_j = (TLorentzVector*)Muon->At(selectedMuonIdx.at(j));
           dilep = *ele_i + *muon_j;
-          cout << Form("[%d, %d] / %f GeV", selectedEleIdx.at(i), selectedMuonIdx.at(j), dilep.M()) << endl;
-          //if( dilep.M() < 20 ) continue;                                           // Step 1. Di-Lepton mass (> 20 GeV) cut
-          //if( Elec_Charge->at( selectedEleIdx.at(i) ) * Muon_Charge->at( selectedMuonIdx.at(j) ) == 1 ) continue;
-          //if( nEle + nMuon >= 3 ) continue;
-          //if( dilep.M() > 76 && dilep.M() < 106 ) continue;
-          //FillHisto(MuonEleInvMass, dilep.M(), evt_weight_);
-          //FillHisto(MuonEleSpectrum, dilep.Pt(), evt_weight_);
+          //cout << Form("[%d, %d] / %f GeV", selectedEleIdx.at(i), selectedMuonIdx.at(j), dilep.M()) << endl;
+          if( dilep.M() < 20 ) continue;                                           // Step 1. Di-Lepton mass (> 20 GeV) cut
+          if( Elec_Charge->at( selectedEleIdx.at(i) ) * Muon_Charge->at( selectedMuonIdx.at(j) ) == 1 ) continue;
+          if( nEle + nMuon >= 3 ) continue;
+          if( dilep.M() > 76 && dilep.M() < 106 ) continue;
+          FillHisto(MuonEleInvMass, dilep.M(), evt_weight_);
+          FillHisto(MuonEleSpectrum, dilep.Pt(), evt_weight_);
         }
       }
 
