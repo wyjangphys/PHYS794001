@@ -30,15 +30,17 @@ class TopMass : public SSBTree
       virtual void Loop();
       void Start();
       void End();
+
+      //user define functions
+      void SetOutputFileName(char *outname);
+      void DeclareHistos();
       int ElectronRequirement(int i);
       int ElectronTriggerRequirement();
       int MuonRequirement(int i);
       int MuonTriggerRequirement();
       int MuonEleTriggerRequirement();
-
-      //user define functions
-      void SetOutputFileName(char *outname);
-      void DeclareHistos();
+      int JetRequirement(int i);
+      bool IsClearJet(int i);
 
    private:
       //put variables that you want
@@ -59,6 +61,7 @@ class TopMass : public SSBTree
       TH1F* Num_MuonEle;
       TH1F* MuonEleSpectrum;
       TH1F* MuonEleInvMass;
+      TH1F* NCleanJets;
 };
 
 #endif
