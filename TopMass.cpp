@@ -154,16 +154,14 @@ void TopMass::Loop()
 
       vector<int> bTaggedJetIdx;
       bTaggedJetIdx.clear();
-      int nBTaggedJet = 0;
       for( int i = 0; i < cleanJetIdx.size(); i++ )
       {
         if( Jet_bDisc->at(i) >= 0.605 ) continue;
         else bTaggedJetIdx.push_back( cleanJetIdx.at(i) );
-        nBTaggedJet++;
       }
-      if( nBTaggedJet < 1 ) continue;
+      if( bTaggedJetIdx.size()  < 1 ) continue;
 
-      FillHisto(NCleanJets, cleanJetIdx.size(), evt_weight_);
+      FillHisto(NCleanJetsInMuMu, cleanJetIdx.size(), evt_weight_);
       FillHisto(Num_Muon, nMuon, evt_weight_);
     }
 
@@ -251,16 +249,14 @@ void TopMass::Loop()
 
       vector<int> bTaggedJetIdx;
       bTaggedJetIdx.clear();
-      int nBTaggedJet = 0;
       for( int i = 0; i < cleanJetIdx.size(); i++)                  // Step 5. 1 or more b tagged Jets (Loose working point for b-Tagging)
       {
         if( Jet_bDisc->at(i) >= 0.605 ) continue;
         else bTaggedJetIdx.push_back( cleanJetIdx.at(i) );
-        nBTaggedJet++;
       }
-      if( nBTaggedJet < 1 ) continue;
+      if( bTaggedJetIdx.size() < 1 ) continue;
 
-      FillHisto(NCleanJets, cleanJetIdx.size(), evt_weight_);
+      FillHisto(NCleanJetsInElEl, cleanJetIdx.size(), evt_weight_);
       FillHisto(Num_Electron, nEle, evt_weight_); // FillHisto(TH1F*, variable, eventweight)
     }
 
@@ -289,7 +285,6 @@ void TopMass::Loop()
       int nMuon = 0;
       int nJet = 0;
       int nCleanJet = 0;
-      int nBTaggedJet = 0;
 
       vector<int> selectedMuonIdx;
       vector<int> selectedEleIdx;
@@ -363,11 +358,10 @@ void TopMass::Loop()
       {
         if( Jet_bDisc->at( cleanJetIdx.at(i) ) <= 0.605 ) continue;
         else bTaggedJetIdx.push_back( cleanJetIdx.at(i) );
-        nBTaggedJet++;
       }
-      if( nBTaggedJet < 1 ) continue;
+      if( bTaggedJetIdx.size() < 1 ) continue;
 
-      FillHisto(NCleanJets,  cleanJetIdx.size(),  evt_weight_);
+      FillHisto(NCleanJetsInElMu,  cleanJetIdx.size(),  evt_weight_);
       FillHisto(Num_MuonEle, nEle+nMuon, evt_weight_); // FillHisto(TH1F*, variable, eventweight)
     }
     else
@@ -400,27 +394,30 @@ void TopMass::DeclareHistos()
   fout->cd("MuMu");
   Num_Muon = new TH1F("Num_Muon", "Number of Muons;NCleanJets", 30, 0, 30);
   Num_Muon->Sumw2();
-  MuonSpectrum = new TH1F("MuonSpectrum", "Momentum distribution of muons; GeV/c", 300, 0, 300);
+  MuonSpectrum = new TH1F("MuonSpectrum", "Pt distribution of dimuons; GeV/c", 100, 0, 1000);
   MuonSpectrum->Sumw2();
   MuonInvMass = new TH1F("MuonInvMass", "Invariant Mass [MuMu]; GeV/c2" , 100, 0, 1000);
   MuonInvMass->Sumw2();
+  NCleanJetsInMuMu = new TH1F("NCleanJetsInMuMu", "Number of clean jets in dimuon events; NJets", 30, 0, 30);
+  NCleanJetsInMuMu->Sumw2();
   fout->cd("EleEle");
   Num_Electron = new TH1F(Form("Num_Electron"), Form("Number of Electrons;NCleanJets"), 30, 0, 30);
   Num_Electron->Sumw2();
-  EleSpectrum = new TH1F(Form("EleSpectrum"), Form("Momentum distribution of electrons;GeV"), 300, 0, 300);
+  EleSpectrum = new TH1F(Form("EleSpectrum"), Form("Pt distribution of dielectrons;GeV/c"), 100, 0, 1000);
   EleSpectrum->Sumw2();
   EleInvMass      = new TH1F(Form("EleInvMass"), Form("Invariant Mass; GeV"), 100,0,1000);
   EleInvMass->Sumw2();
+  NCleanJetsInElEl = new TH1F("NCleanJetsInElEl", "Number of clean jets in dielectron events; NJets", 30, 0, 30);
+  NCleanJetsInElEl->Sumw2();
   fout->cd("MuEle");
   Num_MuonEle = new TH1F("Num_MuonEle", "Number of Muon + Electron Events;NCleanJets", 30, 0, 30);
   Num_MuonEle->Sumw2();
-  MuonEleSpectrum = new TH1F("MuonEleSpectrum", "Pt distribution of muon+ele; GeV/c", 300, 0, 300);
+  MuonEleSpectrum = new TH1F("MuonEleSpectrum", "Pt distribution of muon+ele; GeV/c", 100, 0, 1000);
   MuonEleSpectrum->Sumw2();
   MuonEleInvMass = new TH1F("MuonEleInvMass", "Invariant Mass [MuEle]; GeV/c2", 100, 0, 1000);
   MuonEleInvMass->Sumw2();
-  fout->cd("");
-  NCleanJets = new TH1F("NCleanJets", "Number of Jets in Event; NCleanJets", 30, 0, 30);
-  NCleanJets->Sumw2();
+  NCleanJetsInElMu = new TH1F("NCleanJetsInElMu", "Number of clean jets in electron-muon events; NJets", 30, 0, 30);
+  NCleanJetsInElMu->Sumw2();
 }/*}}}*/
 
 void TopMass::End()

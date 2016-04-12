@@ -55,13 +55,17 @@ class TopMass : public SSBTree
       TH1F* Num_Muon;
       TH1F* MuonSpectrum;
       TH1F* MuonInvMass;
+      TH1F* NCleanJetsInMuMu;
+
       TH1F* Num_Electron;
       TH1F* EleSpectrum;
       TH1F* EleInvMass;
+      TH1F* NCleanJetsInElEl;
+
       TH1F* Num_MuonEle;
       TH1F* MuonEleSpectrum;
       TH1F* MuonEleInvMass;
-      TH1F* NCleanJets;
+      TH1F* NCleanJetsInElMu;
 };
 
 #endif
