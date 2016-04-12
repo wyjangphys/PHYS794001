@@ -1,8 +1,21 @@
 #!/bin/bash
+rm -rf DYJetsToLL_M_10To50.root
+rm -rf DYJetsToLL_M_50.root
+rm -rf ST_tW_antitop.root
+rm -rf ST_tW_top.root
+rm -rf TTBar_Sample.root
+rm -rf TTJets.root
+rm -rf WJetsToLNu.root
+rm -rf WW.root
+rm -rf WZ.root
+rm -rf ZZ.root
+rm -rf ElEl.root
+rm -rf MuMu.root
+rm -rf MuEl.root
 hadd DYJetsTOLL_M_10To50.root  output/DYJetsToLL_M_10To50/*.root
 hadd DYJetsToLL_M_50.root output/DYJetsToLL_M_50/*.root
 hadd ST_tW_antitop.root output/ST_tW_antitop/*.root
-hadd ST_tW_top.root output/ST_tw_top/*.root
+hadd ST_tW_top.root output/ST_tW_top/*.root
 hadd TTBar_Sample.root output/TTBar_Sample/*.root
 hadd TTJets.root output/TTJets/*.root
 hadd WJetsToLNu.root output/WJetsToLNu/*.root
