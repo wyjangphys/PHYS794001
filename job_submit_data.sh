@@ -15,7 +15,7 @@ RUNSCRIPT="$WORKDIR/run.sh"
 OUTDIR="$WORKDIR/output/${1%.list}"
 LOGDIR=$OUTDIR/log
 ERRDIR=$OUTDIR/err
-TARGETDIR="/u/user/wyjang/ExpDataAnalysis-PHYS794001/SSB_NTuple/13TeV_25ns/MC/${1%.list}"
+TARGETDIR="/u/user/wyjang/ExpDataAnalysis-PHYS794001/SSB_NTuple/13TeV_25ns/DATA/${1%.list}"
 
 # Check existence of the RUNSCRIPT.
 if [ -e $RUNSCRIPT ]; then
@@ -65,7 +65,7 @@ do
   OUTFILE=$OUTDIR${irun#$TARGETDIR}
 
   # Execute job submission command.
-  echo /usr/bin/qsub -q knu -o $LOGFILE -e $ERRFILE -l walltime=24:00:00,cput=24:00:00 -N $irun -F \"$irun $OUTFILE\" $RUNSCRIPT
+  #echo /usr/bin/qsub -q knu -o $LOGFILE -e $ERRFILE -l walltime=24:00:00,cput=24:00:00 -N $irun -F \"$irun $OUTFILE\" $RUNSCRIPT
   /usr/bin/qsub -q knu \
   -o $LOGFILE -e $ERRFILE \
   -l walltime=24:00:00,cput=24:00:00 \
