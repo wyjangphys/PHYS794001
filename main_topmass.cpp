@@ -1,10 +1,12 @@
 /**
  * @file main_topmass.cpp
- * @brief main function.
+ * @brief main function of ttbar cross-section analysis.
  * @author Wooyoung Jang, wyjang@knu.ac.kr
  * @date 2016.04.07
  *
  * This is source code of main function of ttbar analysis
+ * Originally written by Prof. Seh-wook Lee, and lots of
+ * modifications have been done by Wooyoung Jang.
  */
 
 #include <iostream>
