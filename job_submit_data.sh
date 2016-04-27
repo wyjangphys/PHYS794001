@@ -22,6 +22,15 @@ if [ -e $RUNSCRIPT ]; then
   echo "Pre-run script file is found ... $RUNSCRIPT"
 else
   echo "Can not find $RUNSCRIPT"
+  exit 1
+fi
+
+# Check existence of the list file
+if [ -e $1 ]; then
+  echo "List file is found ... $1"
+else
+  echo "Can not find the list file $1"
+  exit 2
 fi
 
 # Check the existence of the output directory.

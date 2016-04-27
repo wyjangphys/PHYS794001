@@ -23,7 +23,7 @@ class TopMass : public SSBTree
 {
    public:
       //declare functions
-      TopMass(TTree *tree=0);
+      TopMass(TTree *tree=0, bool mcflag = false);
       virtual ~TopMass();
 
       //basic frame
@@ -32,6 +32,7 @@ class TopMass : public SSBTree
       void End();
 
       //user define functions
+      void SetInputFileName(char* inputname);
       void SetOutputFileName(char *outname);
       void DeclareHistos();
       int ElectronRequirement(int i);
@@ -41,11 +42,19 @@ class TopMass : public SSBTree
       int MuonEleTriggerRequirement();
       int JetRequirement(int i);
       bool IsClearJet(int i);
+      double GetEventWeight();
+      void SetWeightSignCounter();
 
    private:
       //put variables that you want
+      bool isMC;
+      char *infile;
       char *outfile;
+      char *sampleName;
+      TFile *fin;
       TFile *fout;
+      Long64_t nPositiveWeightEvent;
+      Long64_t nNegativeWeightEvent;
 
       // Declare user variables
 
@@ -55,30 +64,46 @@ class TopMass : public SSBTree
       TH1F* Num_Muon;
       TH1F* MuonSpectrum;
       TH1F* MuonInvMass;
+      TH1F* MuonEta;
+      TH1F* MuonPhi;
       TH1F* NCleanJetsInMuMu;
 
       TH1F* Num_Electron;
       TH1F* EleSpectrum;
       TH1F* EleInvMass;
+      TH1F* EleEta;
+      TH1F* ElePhi;
       TH1F* NCleanJetsInElEl;
 
+      TH1F* Num_Mu;
+      TH1F* Num_El;
       TH1F* Num_MuonEle;
+      TH1F* ElePtDistribution;
+      TH1F* EleEta_MuEl;
+      TH1F* ElePhi_MuEl;
+      TH1F* MuEta_MuEl;
+      TH1F* MuPhi_MuEl;
+      TH1F* MuPtDistribution;
       TH1F* MuonEleSpectrum;
       TH1F* MuonEleInvMass;
       TH1F* NCleanJetsInElMu;
+
+   public:
+      // some public variables
 };
 
 #endif
 
 #ifdef TopMass_cxx
 
-TopMass::TopMass(TTree *tree)
+TopMass::TopMass(TTree *tree, bool mcflag = false)
 {
    if (tree == 0)
    {
       printf("ERROR: Can't find any input tree.\n");
    }
    Init(tree);
+   isMC = mcflag;
 }
 
 TopMass::~TopMass()

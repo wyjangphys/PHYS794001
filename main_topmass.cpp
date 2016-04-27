@@ -1,15 +1,15 @@
-//////////////////////////////////////////////////
-//                                              //
-//                                              //
-//  Author: Sehwook Lee, sehwook.lee@knu.ac.kr  //
-//  Modified by Wooyoung Jang 160407            //
-//                       wyjang@knu.ac.kr       //
-//                                              //
-//                                              //
-//////////////////////////////////////////////////
+/**
+ * @file main_topmass.cpp
+ * @brief main function.
+ * @author Wooyoung Jang, wyjang@knu.ac.kr
+ * @date 2016.04.07
+ *
+ * This is source code of main function of ttbar analysis
+ */
 
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <vector>
 #include <ctime>
 
@@ -30,7 +30,12 @@ using namespace std;
 
 TROOT root ("Plots", "Program for CMS Analysis");
 
-//argc: # of arguments, argv:array for arguments
+/**
+ * @brief main function.
+ * @return 0: successfull end of program.
+ *
+ * argc: # of arguments, argv:array for arguments
+ */
 int main(int argc, char **argv)
 {
   cout << "This is modified version of main_topmass.cpp to be used for job submission" << endl;
@@ -42,28 +47,25 @@ int main(int argc, char **argv)
   entries_pertree.clear();
 
   TChain* ch = new TChain("ssbanalyzer/SSBTree");
+
   cout << "adding: " << inputFileName << endl;
-  ch->Add(inputFileName, 0);
-  entries_pertree.push_back(ch->GetEntries());
+  ch->Add( inputFileName, 0 );
+  entries_pertree.push_back( ch->GetEntries() );
 
-  cout << "Total number of events after merging root files: " << ch->GetEntries() << endl;
-  //gDirectory->Add(ch);
-  //gDirectory->pwd();
-  //gDirectory->ls("-l");
-  //gDirectory->cd("rootree:/muonid");
-  //gDirectory->pwd();
-  //gDirectory->GetList()->FindObject("MuID");
-  //gDirectory->Print();
-  //cout <<"ssibal " << gDirectory->GetPath() << endl;
-  //TTree* tree = (TTree*)gDirectory->Get("muonid/MuID");
+  if( strstr( inputFileName, "MC" ) ) 
+    TopMass *topmass = new TopMass(ch, true);
+  else
+    TopMass *topmass = new TopMass(ch, false);
 
-  TopMass *topmass = new TopMass(ch);
-
-  // Setup cuts. 
+  // Setup input file name.
+  topmass->SetInputFileName(inputFileName);
+  // Setup output file name. 
   topmass->SetOutputFileName(outputFileName);
 
+  // Check Weighting Factor Sign Counter
+  //topmass->SetWeightSignCounter();
 
-  // Run event loop
+  /// Run event loop
   topmass->Start();
   topmass->Loop();
   topmass->End();

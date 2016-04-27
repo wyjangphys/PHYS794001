@@ -22,6 +22,15 @@ if [ -e $RUNSCRIPT ]; then
   echo "Pre-run script file is found ... $RUNSCRIPT"
 else
   echo "Can not find $RUNSCRIPT"
+  exit 1
+fi
+
+# Check existence of the list file
+if [ -e $1 ]; then
+  echo "List file is found ... $1"
+else
+  echo "Can not find the list file $1"
+  exit 2
 fi
 
 # Check the existence of the output directory.
@@ -42,7 +51,7 @@ fi
 
 # Check the existence of the log-file directory.
 if [ -d $LOGDIR ]; then
-    echo "Log files will be stored at $LOGDIR"
+  echo "Log files will be stored at $LOGDIR"
 else
   mkdir $LOGDIR
   echo "Warning: $LOGDIR is made to store log files."
@@ -67,10 +76,10 @@ do
   # Execute job submission command.
   #echo /usr/bin/qsub -q knu -o $LOGFILE -e $ERRFILE -l walltime=24:00:00,cput=24:00:00 -N $irun -F \"$irun $OUTFILE\" $RUNSCRIPT
   /usr/bin/qsub -q knu \
-  -o $LOGFILE -e $ERRFILE \
-  -l walltime=24:00:00,cput=24:00:00 \
+    -o $LOGFILE -e $ERRFILE \
+    -l walltime=24:00:00,cput=24:00:00 \
     -N $irun \
-    -F "$irun $OUTFILE" \
+    -F "$irun $OUTFILE $2" \
     $RUNSCRIPT
 done < "$1"
 
