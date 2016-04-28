@@ -1,4 +1,4 @@
-PROGRAM         = TopMass_analysis 
+PROGRAM         = TTBarXSec
 CC              = g++
 LD              = g++
 CXXFLAGS        = -g -O2 -I$(ROOTSYS)/include -std=c++11
@@ -11,22 +11,22 @@ SSBTREE_INPUTS   = ./analysis/SSBTree.C ./analysis/SSBTree.h
 
 LIBS            = $(ROOTLIBS)
 GLIBS           = $(ROOTGLIBS) -L/usr/X11R6/lib -lXext
-OBJS            = CommonTools.o SSBTree.o TopMass.o main_topmass.o
-INPUTS	   	= $(MUONID_INPUTS) TopMass.hpp TopMass.cpp main_topmass.cpp
+OBJS            = CommonTools.o SSBTree.o TTBarXSec.o main.o
+INPUTS	   	= $(MUONID_INPUTS) TTBarXSec.h TTBarXSec.cpp main.cpp
 
-all: $(OBJS) 															
+all: $(OBJS)													
 	$(CC) $(OPT) $(LDFLAGS) -o $(PROGRAM) -g $(OBJS) $(LIBS)
 
-main_topmass.o: main_topmass.cpp $(INPUTS) 
-	$(CC) $(CXXFLAGS) -c main_topmass.cpp
+main.o: main.cpp $(INPUTS) 
+	$(CC) $(CXXFLAGS) -c main.cpp
 
 SSBTree.o: $(SSBTREE_INPUTS)				
 	$(CC) $(CXXFLAGS) -c ./analysis/SSBTree.C
 
-TopMass.o: TopMass.hpp TopMass.cpp
-	$(CC) $(CXXFLAGS) -c ./TopMass.cpp
+TTBarXSec.o: TTBarXSec.h TTBarXSec.cpp
+	$(CC) $(CXXFLAGS) -c ./TTBarXSec.cpp
 
-CommonTools.o: CommonTools.hpp CommonTools.cpp
+CommonTools.o: CommonTools.h CommonTools.cpp
 	$(CC) $(CXXFLAGS) -c CommonTools.cpp
 
 clean:
