@@ -23,7 +23,7 @@ class TTBarXSec : public SSBTree
 {
    public:
       //declare functions
-      TTBarXSec(TTree *tree=0, bool mcflag = false, int runtype);
+      TTBarXSec(TTree *tree=0, bool mcflag = false, int runtype = 0);
       virtual ~TTBarXSec();
 
       //basic frame
@@ -62,32 +62,33 @@ class TTBarXSec : public SSBTree
    public:
       //declare histograms
 
-      TH1F* Num_Muon;
-      TH1F* MuonSpectrum;
-      TH1F* MuonInvMass;
-      TH1F* MuonEta;
-      TH1F* MuonPhi;
-      TH1F* NCleanJetsInMuMu;
+      TH1F* hMuMu_NMuon;
+      TH1F* hMuMu_MuonPt;
+      TH1F* hMuMu_MuonEnergy;
+      TH1F* hMuMu_MuonEta;
+      TH1F* hMuMu_MuonPhi;
+      TH1F* hMuMu_MuonInvMass;
+      TH1F* hMuMu_NJets;
 
-      TH1F* Num_Electron;
-      TH1F* EleSpectrum;
-      TH1F* EleInvMass;
-      TH1F* EleEta;
-      TH1F* ElePhi;
-      TH1F* NCleanJetsInElEl;
+      TH1F* hElEl_NEl;
+      TH1F* hElEl_ElPt;
+      TH1F* hElEl_ElEnergy;
+      TH1F* hElEl_ElEta;
+      TH1F* hElEl_ElPhi;
+      TH1F* hElEl_ElInvMass;
+      TH1F* hElEl_NJets;
 
-      TH1F* Num_Mu;
-      TH1F* Num_El;
-      TH1F* Num_MuonEle;
-      TH1F* ElePtDistribution;
-      TH1F* EleEta_MuEl;
-      TH1F* ElePhi_MuEl;
-      TH1F* MuEta_MuEl;
-      TH1F* MuPhi_MuEl;
-      TH1F* MuPtDistribution;
-      TH1F* MuonEleSpectrum;
-      TH1F* MuonEleInvMass;
-      TH1F* NCleanJetsInElMu;
+      TH1F* hElMu_NMu;
+      TH1F* hElMu_NEl;
+      TH1F* hElMu_MuPt;
+      TH1F* hElMu_MuEnergy;
+      TH1F* hElMu_MuEta;
+      TH1F* hElMu_MuPhi;
+      TH1F* hElMu_ElPt;
+      TH1F* hElMu_ElEnergy;
+      TH1F* hElMu_ElEta;
+      TH1F* hElMu_ElPhi;
+      TH1F* hElMu_NJets;
 
    public:
       // some public variables
@@ -97,7 +98,7 @@ class TTBarXSec : public SSBTree
 
 #ifdef TTBarXSec_cxx
 
-TTBarXSec::TTBarXSec(TTree *tree, bool mcflag = false, int runtype)
+TTBarXSec::TTBarXSec(TTree *tree, bool mcflag, int runtype)
 {
    if (tree == 0)
    {

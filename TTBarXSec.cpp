@@ -1,4 +1,4 @@
-#define TopMass_cxx
+#define TTBarXSec_cxx
 
 #define DEBUG 1
 
@@ -19,7 +19,7 @@
 
 #ifndef MY_HEADER
 #define MY_HEADER
-#include "TopMass.h"
+#include "TTBarXSec.h"
 #include "CommonTools.h"
 #endif
 
@@ -29,8 +29,8 @@ using namespace std;
  * @brief  This method defines the main loop
  * @return
  */
-void TopMass::Loop()
-{/*{{{*/
+void TTBarXSec::Loop()
+{
   if (fChain == 0) return;
 
   Long64_t nentries = fChain->GetEntriesFast();
@@ -43,11 +43,11 @@ void TopMass::Loop()
   /// start event loop ///
   ////////////////////////
   for (Long64_t jentry=0; jentry<nentries;jentry++)
-  {/*{{{*/
+  {
     Long64_t ientry = LoadTree(jentry);
     if (ientry < 0)
     {
-      printf("ERROR: Could not load tree!!!\n");
+      printf("ERROR: Failed to load the tree!!!\n");
       break;
     }
 
@@ -68,7 +68,7 @@ void TopMass::Loop()
     ////////////////////////////////////////
 
     double evt_weight_ = 1.0;
-    if( !Info_isData ) 
+    if( !Info_isData )
       evt_weight_ = GetEventWeight();
 
     /////////////////////////////////////////////
@@ -79,15 +79,17 @@ void TopMass::Loop()
     ///////////////////////////////////////////////////
     // Here is for MuMu scenario                     //
     ///////////////////////////////////////////////////
-    if( this->MuonTriggerRequirement() == 1 )              // Step 0. Trigger requirement/*{{{*/
+    if( this->MuonTriggerRequirement() == 1 ) // Step 0. Trigger requirement/*{{{*/
     {
-      //cout << "MuonTriggerRequirement() == 1" << endl;
       if( Info_isData == false )
       {
-        if( Channel_Idx != 26 )
+        if( strstr(infile, "TTBar_Sample") )
         {
-          //cout << "return 0 no matching index" << endl;
-          continue;
+          if( Channel_Idx != 26 )
+          {
+            //cout << "return 0 no matching index" << endl;
+            continue;
+          }
         }
       }
 
@@ -119,8 +121,6 @@ void TopMass::Loop()
           if( Muon_Charge->at( selectedMuonIdx.at(i) ) * Muon_Charge->at( selectedMuonIdx.at(j) ) != -1 ) continue;
           if( nMuon >= 3 ) continue;
           if( diMuon.M() > 76 && diMuon.M() < 106 ) continue;
-          FillHisto(MuonInvMass, diMuon.M(), evt_weight_);
-          //FillHisto(MuonSpectrum, diMuon.Pt(), evt_weight_);
         }
       }
 
@@ -159,10 +159,14 @@ void TopMass::Loop()
       if( nMuon != 0 )
       {
         leadingMuon = *(TLorentzVector*)Muon->At( selectedMuonIdx.at(0) );
-        FillHisto(MuonSpectrum, leadingMuon.Pt(), evt_weight_);
+        FillHisto(hMuMu_MuonPt, leadingMuon.Pt(), evt_weight_);
+        FillHisto(hMuMu_MuonEnergy, leadingMuon.Energy(), evt_weight_);
+        FillHisto(hMuMu_MuonEta, leadingMuon.Eta(), evt_weight_);
+        FillHisto(hMuMu_MuonPhi, leadingMuon.Phi(), evt_weight_);
       }
-      FillHisto(NCleanJetsInMuMu, cleanJetIdx.size(), evt_weight_);
-      FillHisto(Num_Muon, nMuon, evt_weight_);
+      FillHisto(hMuMu_MuonInvMass, diMuon.M(), evt_weight_);
+      FillHisto(hMuMu_NJets, cleanJetIdx.size(), evt_weight_);
+      FillHisto(hMuMu_NMuon, nMuon, evt_weight_);
     }/*}}}*/
 
     ///////////////////////////////////////////////////
@@ -177,7 +181,7 @@ void TopMass::Loop()
     // Step 5. 1 or more b tagged Jets (Loose working point for b-Tagging )
 
     // Step 0. Trigger requirement
-    //     Most of codes are implemented in the member function TopMass::ElectronTriggerRequirement
+    //     Most of codes are implemented in the member function TTBarXSec::ElectronTriggerRequirement
     else if( this->ElectronTriggerRequirement() == 1 )
     {
       if( Info_isData == false )          /// When the input file is MC,
@@ -187,7 +191,7 @@ void TopMass::Loop()
 
       // Step 1. Lepton requirement
       //     Among the events passed the trigger requirement, apply the electron requirement.
-      //  Most of processes are implemented as a member function TopMass::ElectronRequirement
+      //  Most of processes are implemented as a member function TTBarXSec::ElectronRequirement
       int nEle = 0;                       /// Number of electrons which passed the electron requirement.
       TLorentzVector dilep;               /// Dilepton TLorentzVector
       TLorentzVector leadingElectron;
@@ -219,8 +223,6 @@ void TopMass::Loop()
           if( Elec_Charge->at( selectedEleIdx.at(i) ) * Elec_Charge->at( selectedEleIdx.at(j) ) == 1 ) continue; // Step 1. Opposite charge cut
           if( dilep.M() > 76 && dilep.M() < 106) continue;                          // Step 2. Z-mass veto
           if( dilep.Pt() < 20) continue;
-          FillHisto(EleInvMass, dilep.M(), evt_weight_);
-          FillHisto(EleSpectrum, dilep.Pt(), evt_weight_);
         }
       }
 
@@ -259,10 +261,14 @@ void TopMass::Loop()
       if( nEle != 0 )
       {
         leadingElectron = *(TLorentzVector*)Elec->At( selectedEleIdx.at(0) );
-        FillHisto(EleSpectrum, leadingElectron.Pt(), evt_weight_);
+        FillHisto(hElEl_ElPt, leadingElectron.Pt(), evt_weight_);
+        FillHisto(hElEl_ElEnergy, leadingElectron.Energy(), evt_weight_);
+        FillHisto(hElEl_ElEta, leadingElectron.Eta(), evt_weight_);
+        FillHisto(hElEl_ElPhi, leadingElectron.Phi(), evt_weight_);
       }
-      FillHisto(NCleanJetsInElEl, cleanJetIdx.size(), evt_weight_);
-      FillHisto(Num_Electron, nEle, evt_weight_); // FillHisto(TH1F*, variable, eventweight)
+      FillHisto(hElEl_ElInvMass, dilep.M(), evt_weight_);
+      FillHisto(hElEl_NJets, cleanJetIdx.size(), evt_weight_);
+      FillHisto(hElEl_NEl, nEle, evt_weight_); // FillHisto(TH1F*, variable, eventweight)
     }/*}}}*/
 
     ///////////////////////////////////////////////////
@@ -329,8 +335,6 @@ void TopMass::Loop()
           if( Elec_Charge->at( selectedEleIdx.at(i) ) * Muon_Charge->at( selectedMuonIdx.at(j) ) == 1 ) continue;
           if( nEle + nMuon >= 3 ) continue;
           if( dilep.M() > 76 && dilep.M() < 106 ) continue;
-          FillHisto(MuonEleInvMass, dilep.M(), evt_weight_);
-          FillHisto(MuonEleSpectrum, dilep.Pt(), evt_weight_);
         }
       }
 
@@ -366,28 +370,32 @@ void TopMass::Loop()
       }
       if( bTaggedJetIdx.size() < 1 ) continue;
 
-      FillHisto(Num_Mu, nMuon, evt_weight_);
-      FillHisto(Num_El, nEle, evt_weight_);
       if( nMuon != 0 )
       {
         leadingMuonInMuEl = *(TLorentzVector*)Muon->At( selectedMuonIdx.at(0) );
-        FillHisto(MuPtDistribution, leadingMuonInMuEl.Pt(), evt_weight_);
+        FillHisto(hElMu_MuPt, leadingMuonInMuEl.Pt(), evt_weight_);
+        FillHisto(hElMu_MuEnergy, leadingMuonInMuEl.E(), evt_weight_);
+        FillHisto(hElMu_MuEta, leadingMuonInMuEl.Eta(), evt_weight_);
+        FillHisto(hElMu_MuPhi, leadingMuonInMuEl.Phi(), evt_weight_);
       }
       if( nEle != 0 )
       {
         leadingElectronInMuEl = *(TLorentzVector*)Elec->At( selectedEleIdx.at(0) );
-        FillHisto(ElePtDistribution, leadingElectronInMuEl.Pt(), evt_weight_);
+        FillHisto(hElMu_ElPt, leadingElectronInMuEl.Pt(), evt_weight_);
+        FillHisto(hElMu_ElEnergy, leadingElectronInMuEl.E(), evt_weight_);
+        FillHisto(hElMu_ElEta, leadingElectronInMuEl.Eta(), evt_weight_);
+        FillHisto(hElMu_ElPhi, leadingElectronInMuEl.Phi(), evt_weight_);
       }
-
-      FillHisto(NCleanJetsInElMu,  cleanJetIdx.size(),  evt_weight_);
-      FillHisto(Num_MuonEle, nEle+nMuon, evt_weight_); // FillHisto(TH1F*, variable, eventweight)
+      FillHisto(hElMu_NJets,  cleanJetIdx.size(),  evt_weight_);
+      FillHisto(hElMu_NMu, nMuon, evt_weight_);
+      FillHisto(hElMu_NEl, nEle, evt_weight_);
     }/*}}}*/
     else
     {
       //cout << "Event: " << jentry << " - No good trigger in this event" << endl;
       continue;
     }
-  }//event loop/*}}}*/
+  }//event loop
 
   /////////////////////////
   /// end of event loop ///
@@ -395,12 +403,12 @@ void TopMass::Loop()
 
   printf("Total processed number of events: %lld\n", __tot_evt);
 
-}//end Loop function/*}}}*/
+}//end Loop function
 
 /*
  * @brief
  */
-void TopMass::Start()
+void TTBarXSec::Start()
 {/*{{{*/
   fin  = new TFile(Form("%s",infile) ,"READ");
   fout = new TFile(Form("%s",outfile),"RECREATE");
@@ -415,46 +423,64 @@ void TopMass::Start()
   DeclareHistos();
 }/*}}}*/
 
-void TopMass::DeclareHistos()
+void TTBarXSec::DeclareHistos()
 {/*{{{*/
   fout->cd("MuMu");
-  Num_Muon = new TH1F("Num_Muon", "Number of Muons;NCleanJets", 30, 0, 30);
-  Num_Muon->Sumw2();
-  MuonSpectrum = new TH1F("MuonSpectrum", "p^{T} distribution of dimuons; GeV/c", 100, 0, 1000);
-  MuonSpectrum->Sumw2();
-  MuonInvMass = new TH1F("MuonInvMass", "Invariant Mass [MuMu]; GeV/c2" , 100, 0, 1000);
-  MuonInvMass->Sumw2();
-  NCleanJetsInMuMu = new TH1F("NCleanJetsInMuMu", "Number of clean jets in dimuon events; NJets", 30, 0, 30);
-  NCleanJetsInMuMu->Sumw2();
+  hMuMu_NMuon = new TH1F("hMuMu_NMuon", "Number of Muons;NCleanJets", 30, 0, 30);
+  hMuMu_NMuon->Sumw2();
+  hMuMu_MuonPt = new TH1F("hMuMu_MuonPt", "p^{T} distribution of dimuons; GeV/c", 100, 0, 1000);
+  hMuMu_MuonPt->Sumw2();
+  hMuMu_MuonEnergy = new TH1F("hMuMu_MuonEnergy", "Energy distribution of leading muon; GeV; Entries", 100, 0, 1000);
+  hMuMu_MuonEnergy->Sumw2();
+  hMuMu_MuonEta = new TH1F("hMuMu_MuonEta", "#eta distribution of muon", 100, -5, 5);
+  hMuMu_MuonEta->Sumw2();
+  hMuMu_MuonPhi = new TH1F("hMuMu_MuonPhi", "#phi distribution of muon", 100, 0, TMath::TwoPi());
+  hMuMu_MuonPhi->Sumw2();
+  hMuMu_MuonInvMass = new TH1F("hMuMu_MuonInvMass", "Invariant Mass [MuMu]; GeV/c2" , 100, 0, 1000);
+  hMuMu_MuonInvMass->Sumw2();
+  hMuMu_NJets = new TH1F("hMuMu_NJets", "Number of clean jets in dimuon events; NJets", 30, 0, 30);
+  hMuMu_NJets->Sumw2();
+
   fout->cd("EleEle");
-  Num_Electron = new TH1F(Form("Num_Electron"), Form("Number of Electrons;NCleanJets"), 30, 0, 30);
-  Num_Electron->Sumw2();
-  EleSpectrum = new TH1F(Form("EleSpectrum"), Form("p^{T} distribution of dielectrons;GeV/c"), 100, 0, 1000);
-  EleSpectrum->Sumw2();
-  EleInvMass      = new TH1F(Form("EleInvMass"), Form("Invariant Mass; GeV"), 100,0,1000);
-  EleInvMass->Sumw2();
-  NCleanJetsInElEl = new TH1F("NCleanJetsInElEl", "Number of clean jets in dielectron events; NJets", 30, 0, 30);
-  NCleanJetsInElEl->Sumw2();
+  hElEl_NEl = new TH1F(Form("hElEl_NEl"), Form("Number of Electrons;NCleanJets"), 30, 0, 30);
+  hElEl_NEl->Sumw2();
+  hElEl_ElPt = new TH1F(Form("hElEl_ElPt"), Form("p^{T} distribution of leading electrons;GeV/c"), 100, 0, 1000);
+  hElEl_ElPt->Sumw2();
+  hElEl_ElEnergy = new TH1F("hElEl_ElEnergy", "Energy distribution of leading electrons; GeV; Entries", 100, 0, 1000);
+  hElEl_ElEnergy->Sumw2();
+  hElEl_ElEta = new TH1F("hElEl_ElEta", "#eta distribution of electron", 100, -5, 5);
+  hElEl_ElEta->Sumw2();
+  hElEl_ElPhi = new TH1F("hElEl_ElPhi", "#phi distribution of electron", 100, 0, TMath::TwoPi());
+  hElEl_ElPhi->Sumw2();
+  hElEl_ElInvMass = new TH1F(Form("hElEl_ElInvMass"), Form("Invariant Mass; GeV"), 100,0,1000);
+  hElEl_ElInvMass->Sumw2();
+  hElEl_NJets = new TH1F("hElEl_NJets", "Number of clean jets in dielectron events; NJets", 30, 0, 30);
+  hElEl_NJets->Sumw2();
+
   fout->cd("MuEle");
-  Num_Mu = new TH1F("Num_Mu", "Number of Muon Events; NMuon", 30, 0, 30);
-  //Num_Mu->Sumw2();
-  Num_El = new TH1F("Num_El", "Number of Electron Events; NElectron", 30, 0, 30);
-  //Num_El->Sumw2();
-  Num_MuonEle = new TH1F("Num_MuonEle", "Number of Muon + Electron Events;NCleanJets", 30, 0, 30);
-  //Num_MuonEle->Sumw2();
-  ElePtDistribution = new TH1F("ElePtDistribution", "p^{T} distribution of electrons", 100, 0, 1000);
-  ElePtDistribution->Sumw2();
-  MuPtDistribution = new TH1F("MuPtDistribution", "p^{T} distribution of muons", 100, 0, 1000);
-  MuPtDistribution->Sumw2();
-  MuonEleSpectrum = new TH1F("MuonEleSpectrum", "p^{T} distribution of muon+ele; GeV/c", 100, 0, 1000);
-  MuonEleSpectrum->Sumw2();
-  MuonEleInvMass = new TH1F("MuonEleInvMass", "Invariant Mass [MuEle]; GeV/c2", 100, 0, 1000);
-  MuonEleInvMass->Sumw2();
-  NCleanJetsInElMu = new TH1F("NCleanJetsInElMu", "Number of clean jets in electron-muon events; NJets", 30, 0, 30);
-  NCleanJetsInElMu->Sumw2();
+  hElMu_NMu = new TH1F("hElMu_NMu", "Number of Muon Events in e#mu channel; NMuon", 30, 0, 30);
+  hElMu_NMu->Sumw2();
+  hElMu_NEl = new TH1F("hElMu_NEl", "Number of Electron Events in e#mu channel; NElectron", 30, 0, 30);
+  hElMu_NEl->Sumw2();
+  hElMu_MuPt = new TH1F("hElMu_MuPt", "p^{T} distribution of leading muons;GeV/c;Entries", 100, 0, 1000);
+  hElMu_MuPt->Sumw2();
+  hElMu_MuEnergy = new TH1F("hElMu_MuEnergy", "Energy distribution of leading muons in e#mu channel;GeV;Entries", 100, 0, 1000);
+  hElMu_MuEnergy->Sumw2();
+  hElMu_MuEta = new TH1F("hElMu_MuEta", "#eta distribution of muons in e#mu channel;#eta;Entries", 100, -5, 5);
+  hElMu_MuEta->Sumw2();
+  hElMu_MuPhi = new TH1F("hElMu_MuPhi", "#phi distribution of muons in e#mu channel;#phi;Entries", 100, 0, TMath::TwoPi());
+  hElMu_MuPhi->Sumw2();
+  hElMu_ElPt = new TH1F("hElMu_ElPt", "p^{T} distribution of electrons in e#mu channel;GeV/c;Entries", 100, 0, 1000);
+  hElMu_ElPt->Sumw2();
+  hElMu_ElEnergy = new TH1F("hElMu_ElEnergy", "Energy distribution of leading electrons in e#mu channel;GeV;entries", 100, 0, 1000);
+  hElMu_ElEnergy->Sumw2();
+  hElMu_ElEta = new TH1F("hElMu_ElEta", "#eta distribution of muons in e#mu channel;#eta;Entries", 100, -5, 5);
+  hElMu_ElEta->Sumw2();
+  hElMu_ElPhi = new TH1F("hElMu_ElPhi", "#phi distribution of muons in e#mu channel;#phi;Entries", 100, 0, TMath::TwoPi());
+  hElMu_ElPhi->Sumw2();
 }/*}}}*/
 
-void TopMass::End()
+void TTBarXSec::End()
 {/*{{{*/
   //NPositiveWeightEvents->Fill(nPositiveWeightEvent);
   //NNegativeWeightEvents->Fill(nNegativeWeightEvent);
@@ -462,17 +488,17 @@ void TopMass::End()
   fout->Close();
 }/*}}}*/
 
-void TopMass::SetInputFileName(char *inputname)
+void TTBarXSec::SetInputFileName(char *inputname)
 {/*{{{*/
   infile = inputname;
 }/*}}}*/
 
-void TopMass::SetOutputFileName(char *outname)
+void TTBarXSec::SetOutputFileName(char *outname)
 {/*{{{*/
   outfile = outname;
 }/*}}}*/
 
-int TopMass::ElectronTriggerRequirement()
+int TTBarXSec::ElectronTriggerRequirement()
 {/*{{{*/
   int ptrigindex = 0;
   bool trigpass  = false;
@@ -490,7 +516,7 @@ int TopMass::ElectronTriggerRequirement()
   return 1;
 }/*}}}*/
 
-int TopMass::ElectronRequirement(int i)
+int TTBarXSec::ElectronRequirement(int i)
 {/*{{{*/
   TLorentzVector* ele_tag = (TLorentzVector*)Elec->At(i);
   if ( Elec_PFIsoRho03->at(i) > 0.0766 )                 return 0;
@@ -517,33 +543,31 @@ int TopMass::ElectronRequirement(int i)
   return 1;
 }/*}}}*/
 
-int TopMass::MuonTriggerRequirement()
+int TTBarXSec::MuonTriggerRequirement()
 {/*{{{*/
-  int ptrigindex;
-  bool trigpass;
-
-  ptrigindex = 0;
-  trigpass = false;
+  int ptrigindex = 0;
+  bool trigpass  = false;
 
   for( unsigned int i = 0; i < Trigger_Name->size(); i++)
   {
-    //cout << "Checking Triggers...." << endl;
-    //cout << TString( Trigger_Name->at(i) ) << " / Trigger_isPass : " << Trigger_isPass->at(i) << " / Trigger_isError: " << Trigger_isError->at(i) << " / Trigger_isRun: " << Trigger_isRun->at(i) << endl;
     if( TString( Trigger_Name->at(i) ).Contains( "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v" )
-        || TString( Trigger_Name->at(i) ).Contains( "HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL_DZ_v") )
-      if ( ( Trigger_isPass->at(i) ) && !( Trigger_isError->at(i) ) && ( Trigger_isRun->at(i) ) ){ ptrigindex = ptrigindex+1; }
-  }
-  if( ptrigindex > 0 ) trigpass = true;
-  if( trigpass == false )
-  {
-    //cout << "return 0 for trigpass false" << endl;
-    return 0;
+     || TString( Trigger_Name->at(i) ).Contains( "HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL_DZ_v" ) )
+    {
+      if ( ( Trigger_isPass->at(i) )
+       && !( Trigger_isError->at(i) )
+       &&  ( Trigger_isRun->at(i) ) )
+      {
+        ptrigindex = ptrigindex+1;
+      }
+    }
   }
 
-  return 1;
+  if( ptrigindex > 0 ) trigpass = true;
+
+  return trigpass;
 }/*}}}*/
 
-int TopMass::MuonRequirement(int i)
+int TTBarXSec::MuonRequirement(int i)
 {/*{{{*/
   TLorentzVector* mu_tag = (TLorentzVector*)Muon->At(i);
   if ( Muon_PFIsodBeta04->at(i) > 0.12 ) return 0;
@@ -554,7 +578,7 @@ int TopMass::MuonRequirement(int i)
   return 1;
 }/*}}}*/
 
-int TopMass::MuonEleTriggerRequirement()
+int TTBarXSec::MuonEleTriggerRequirement()
 {/*{{{*/
   int ptrigindex;
   bool trigpass;
@@ -574,7 +598,7 @@ int TopMass::MuonEleTriggerRequirement()
   return 1;
 }/*}}}*/
 
-int TopMass::JetRequirement(int i)
+int TTBarXSec::JetRequirement(int i)
 {/*{{{*/
   if( Jet_PFId->at(i) < 1 ) return 0;
 
@@ -585,7 +609,7 @@ int TopMass::JetRequirement(int i)
   return 1;
 }/*}}}*/
 
-bool TopMass::IsClearJet(int i)
+bool TTBarXSec::IsClearJet(int i)
 {/*{{{*/
   TLorentzVector* jet = (TLorentzVector*)Jet->At(i);
 
@@ -607,28 +631,37 @@ bool TopMass::IsClearJet(int i)
   return true;
 }/*}}}*/
 
-double TopMass::GetEventWeight()
+double TTBarXSec::GetEventWeight()
 {/*{{{*/
   if( Info_isData == true ) { return 1; }
 
-  Double_t weight = 1.;
-  Double_t pileUp = Weight_PileUp->at(0);
+  Double_t weight           = 1.;
+  Double_t pileUp           = Weight_PileUp->at(0);
   Double_t mcGenEventWeight = 1.;
-  Double_t mcScaleFactor = 1.;
+  Double_t mcScaleFactor    = 1.;
+  const Double_t lumi       = 2.11e03;
+  Int_t mcSampleIdx         = -1;
   Double_t xsec[9] = {
-    831.76, 18610., 6025., 61526., 118.7, 65.9, 31.8, 35.6, 35.6};
-  const Double_t lumi = 2.11e03;
-  Int_t mcSampleIdx = -1;
+    831.76, // TTBar_Sample
+    18610., // DYJetsToLL_M_10To50
+    6025.,  // DYJetsToLL_M_50
+    61526., // WJetsToLNu
+    118.7,  // WW
+    65.9,   // WZ
+    31.8,   // ZZ
+    35.6,   // ST_tW_antitop
+    35.6    // ST_tW_top
+  };
 
   if      ( strstr(infile, "TTBar_Sample")        ) { mcSampleIdx = 0; nPositiveWeightEvent = 19757190; nNegativeWeightEvent = 0; }
   else if ( strstr(infile, "DYJetsToLL_M_10To50") ) { mcSampleIdx = 1; nPositiveWeightEvent = 26023312; nNegativeWeightEvent = 4103247; }
   else if ( strstr(infile, "DYJetsToLL_M_50")     ) { mcSampleIdx = 2; nPositiveWeightEvent = 24003538; nNegativeWeightEvent = 4744431; }
   else if ( strstr(infile, "WJetsToLNu")          ) { mcSampleIdx = 3; nPositiveWeightEvent = 20363007; nNegativeWeightEvent = 3821759; }
-  else if ( strstr(infile, "WW")                  ) { mcSampleIdx = 4; nPositiveWeightEvent = 993640; nNegativeWeightEvent = 0; }
-  else if ( strstr(infile, "WZ")                  ) { mcSampleIdx = 5; nPositiveWeightEvent = 978512; nNegativeWeightEvent = 0; }
-  else if ( strstr(infile, "ZZ")                  ) { mcSampleIdx = 6; nPositiveWeightEvent = 996944; nNegativeWeightEvent = 0; }
-  else if ( strstr(infile, "ST_tW_antitop")       ) { mcSampleIdx = 7; nPositiveWeightEvent = 988500; nNegativeWeightEvent = 0; }
-  else if ( strstr(infile, "ST_tW_top")           ) { mcSampleIdx = 8; nPositiveWeightEvent = 995600; nNegativeWeightEvent = 0; }
+  else if ( strstr(infile, "WW")                  ) { mcSampleIdx = 4; nPositiveWeightEvent = 993640;   nNegativeWeightEvent = 0; }
+  else if ( strstr(infile, "WZ")                  ) { mcSampleIdx = 5; nPositiveWeightEvent = 978512;   nNegativeWeightEvent = 0; }
+  else if ( strstr(infile, "ZZ")                  ) { mcSampleIdx = 6; nPositiveWeightEvent = 996944;   nNegativeWeightEvent = 0; }
+  else if ( strstr(infile, "ST_tW_antitop")       ) { mcSampleIdx = 7; nPositiveWeightEvent = 988500;   nNegativeWeightEvent = 0; }
+  else if ( strstr(infile, "ST_tW_top")           ) { mcSampleIdx = 8; nPositiveWeightEvent = 995600;   nNegativeWeightEvent = 0; }
 
   if( mcSampleIdx == -1 ) { cout << "A Critical Bug : MC sample index can not be determined." << endl; }
 
@@ -638,7 +671,7 @@ double TopMass::GetEventWeight()
   return weight;
 }/*}}}*/
 
-void TopMass::SetWeightSignCounter()
+void TTBarXSec::SetWeightSignCounter()
 {/*{{{*/
   // This function usually not called during the run.
   // Once you check the each positive and negative sign counters of weight,

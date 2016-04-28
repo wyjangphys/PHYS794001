@@ -4,32 +4,32 @@
 void FillHisto(TH1 *hist, Double_t val, Double_t weight)
 {
    Int_t nbins=hist->GetNbinsX();
-   Double_t minval=hist->GetXaxis()->GetBinCenter(1);  
+   Double_t minval=hist->GetXaxis()->GetBinCenter(1);
    Double_t maxval=hist->GetXaxis()->GetBinCenter(nbins);
 
-   if(val< minval)    
-      hist->Fill(minval, weight);  
-   else if(val>maxval)    
+   if(val< minval)
+      hist->Fill(minval, weight);
+   else if(val>maxval)
       hist->Fill(maxval, weight);
-   else    
+   else
       hist->Fill(val, weight);
 }
 
 void FillHisto(TH2 *hist, Double_t valx, Double_t valy, Double_t weight)
 {
-   Int_t nbinsx=hist->GetNbinsX();  
-   Double_t minvalx=hist->GetXaxis()->GetBinCenter(1);  
-   Double_t maxvalx=hist->GetXaxis()->GetBinCenter(nbinsx);        
+   Int_t nbinsx=hist->GetNbinsX();
+   Double_t minvalx=hist->GetXaxis()->GetBinCenter(1);
+   Double_t maxvalx=hist->GetXaxis()->GetBinCenter(nbinsx);
 
    Int_t nbinsy=hist->GetNbinsY();
-   Double_t minvaly=hist->GetYaxis()->GetBinCenter(1);  
-   Double_t maxvaly=hist->GetYaxis()->GetBinCenter(nbinsy);  
+   Double_t minvaly=hist->GetYaxis()->GetBinCenter(1);
+   Double_t maxvaly=hist->GetYaxis()->GetBinCenter(nbinsy);
 
-   Double_t newvalx=valx;  
+   Double_t newvalx=valx;
    Double_t newvaly=valy;
 
-   if(valx< minvalx)    
-      newvalx=minvalx;  
+   if(valx< minvalx)
+      newvalx=minvalx;
    else if(valx>maxvalx)
       newvalx=maxvalx;
 
