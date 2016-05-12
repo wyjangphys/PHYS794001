@@ -83,29 +83,35 @@ void draw()
   c1->BuildLegend();
 }/*}}}*/
 
-void draw2()
+void drawElEl()
 {/*{{{*/
   TFile* fInput = new TFile("ElEl.root");
-  TH1F* hData1 = (TH1F*)fInput->Get("EleEle/Num_Electron");
+  TH1F* hData1 = (TH1F*)fInput->Get("EleEle/hElEl_NEl");
   hData1->SetFillColor(kRed);
   hData1->SetLineColor(kRed);
   hData1->SetMarkerStyle(21);
   hData1->SetMarkerColor(kRed);
-  TH1F* hData2 = (TH1F*)fInput->Get("EleEle/EleSpectrum");
+  TH1F* hData2 = (TH1F*)fInput->Get("EleEle/hElEl_ElPt");
+  //TH1F* hData2 = (TH1F*)fInput->Get("EleEle/EleSpectrum");
   hData2->SetFillColor(kRed);
   hData2->SetLineColor(kRed);
   hData2->SetMarkerStyle(21);
   hData2->SetMarkerColor(kRed);
-  TH1F* hData3 = (TH1F*)fInput->Get("EleEle/EleInvMass");
+  cout << "OK2" << endl;
+  TH1F* hData3 = (TH1F*)fInput->Get("EleEle/hElEl_ElInvMass");
+  //TH1F* hData3 = (TH1F*)fInput->Get("EleEle/EleInvMass");
   hData3->SetFillColor(kRed);
   hData3->SetLineColor(kRed);
   hData3->SetMarkerStyle(21);
   hData3->SetMarkerColor(kRed);
-  TH1F* hData4 = (TH1F*)fInput->Get("EleEle/NCleanJetsInElEl");
+  cout << "OK3" << endl;
+  TH1F* hData4 = (TH1F*)fInput->Get("EleEle/hElEl_NJets");
+  //TH1F* hData4 = (TH1F*)fInput->Get("EleEle/NCleanJetsInElEl");
   hData4->SetFillColor(kRed);
   hData4->SetLineColor(kRed);
   hData4->SetMarkerStyle(21);
   hData4->SetMarkerColor(kRed);
+  cout << "OK4" << endl;
 
   vector<string> sampleNames;
   sampleNames.push_back("DYJetsToLL_M_10To50");    // 
@@ -147,10 +153,10 @@ void draw2()
     TFile* fPointer = fileVector[i];
     if( fPointer->IsOpen() ) cout << "File opened: " << fPointer->GetName() << endl;
 
-    histVector1.push_back( (TH1F*)fPointer->Get("EleEle/Num_Electron") );
-    histVector2.push_back( (TH1F*)fPointer->Get("EleEle/EleInvMass") );
-    histVector3.push_back( (TH1F*)fPointer->Get("EleEle/EleSpectrum") );
-    histVector4.push_back( (TH1F*)fPointer->Get("EleEle/NCleanJetsInElEl") );
+    histVector1.push_back( (TH1F*)fPointer->Get("EleEle/hElEl_NEl") );
+    histVector2.push_back( (TH1F*)fPointer->Get("EleEle/hElEl_ElInvMass") );
+    histVector3.push_back( (TH1F*)fPointer->Get("EleEle/hElEl_ElPt") );
+    histVector4.push_back( (TH1F*)fPointer->Get("EleEle/hElEl_NJets") );
 
     TH1F* h1 = histVector1.at(i);
     TH1F* h2 = histVector2.at(i);

@@ -27,23 +27,25 @@ class TTBarXSec : public SSBTree
       virtual ~TTBarXSec();
 
       //basic frame
-      virtual void Loop();
+      virtual void ElElLoop();
+      virtual void MuMuLoop();
+      virtual void ElMuLoop();
       void Start();
       void End();
 
       //user define functions
-      void SetInputFileName(char* inputname);
-      void SetOutputFileName(char *outname);
-      void DeclareHistos();
-      int ElectronRequirement(int i);
-      int ElectronTriggerRequirement();
-      int MuonRequirement(int i);
-      int MuonTriggerRequirement();
-      int MuonEleTriggerRequirement();
-      int JetRequirement(int i);
-      bool IsClearJet(int i);
-      double GetEventWeight();
-      void SetWeightSignCounter();
+      void    SetInputFileName(char* inputname);
+      void    SetOutputFileName(char *outname);
+      void    DeclareHistos();
+      int     ElectronRequirement(int i);
+      bool    ElectronTriggerRequirement();
+      bool    IsMuonRequirementOK(int i);
+      int     MuonTriggerRequirement();
+      int     MuonEleTriggerRequirement();
+      int     JetRequirement(int i);
+      bool    IsClearJet(int i);
+      double  GetEventWeight();
+      void    SetWeightSignCounter();
 
    private:
       //put variables that you want
@@ -61,7 +63,6 @@ class TTBarXSec : public SSBTree
 
    public:
       //declare histograms
-
       TH1F* hMuMu_NMuon;
       TH1F* hMuMu_MuonPt;
       TH1F* hMuMu_MuonEnergy;
@@ -99,7 +100,7 @@ class TTBarXSec : public SSBTree
 #ifdef TTBarXSec_cxx
 
 TTBarXSec::TTBarXSec(TTree *tree, bool mcflag, int runtype)
-{
+{/*{{{*/
    if (tree == 0)
    {
       printf("ERROR: Can't find any input tree.\n");
@@ -139,12 +140,12 @@ TTBarXSec::TTBarXSec(TTree *tree, bool mcflag, int runtype)
      default:
        break;
    }
-}
+}/*}}}*/
 
 TTBarXSec::~TTBarXSec()
-{
+{/*{{{*/
    if (!fChain) return;
    delete fChain->GetCurrentFile();
-}
+}/*}}}*/
 
 #endif

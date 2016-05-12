@@ -26,23 +26,180 @@
 using namespace std;
 
 /*
- * @brief  This method defines the main loop
+ * @brief  This method defines the dielectron analysis loop
  * @return
  */
-void TTBarXSec::Loop()
-{
+void TTBarXSec::ElElLoop()
+{/*{{{*/
   if (fChain == 0) return;
 
-  Long64_t nentries = fChain->GetEntriesFast();
-  Long64_t nbytes = 0, nb = 0;
+  unsigned int nEntries = fChain->GetEntriesFast();
+  unsigned int nBytes = 0;
+  unsigned int nb = 0;
 
   ///My variables
-  Long64_t __tot_evt = 0;
+  unsigned int __tot_evt = 0;
+  unsigned int nElecTrigEvent = 0;
 
   ////////////////////////
   /// start event loop ///
   ////////////////////////
-  for (Long64_t jentry=0; jentry<nentries;jentry++)
+  int nEle = 0;                       // Number of electrons which passed the electron requirement.
+  int nDilep= 0;
+  int nJet = 0;
+  int nMET = 0;
+  for (Long64_t jentry=0; jentry < nEntries; jentry++)
+  {
+    Long64_t ientry = LoadTree(jentry);
+    if ( ientry < 0 )
+    {
+      printf("ERROR: Failed to load the tree!!!\n");
+      break;
+    }
+
+    nb = fChain->GetEntry(jentry);   nBytes += nb;
+
+    if ( jentry % 10000 == 0 ) printf("Event %lld\n", jentry); //%lld supports Long64_t
+
+    __tot_evt++;
+
+    //////////////////////////////////////
+    //  start any calculation and cuts  //
+    //////////////////////////////////////
+
+    ////////////////////////////////////////
+    // Example of Event Weight            //
+    // (Only for MC Samples ...           //
+    // DO NOT APPLY EVENT WEIGHT TO DATA )//
+    ////////////////////////////////////////
+
+    double evt_weight_ = 1.0;
+    if( !Info_isData )
+      evt_weight_ = GetEventWeight();
+
+    /////////////////////////////////////////////
+    // Example of Vertex Filter (EventFillter) //
+    /////////////////////////////////////////////
+    if ( Filter_PV->at(0) == false ) { continue; }
+
+    ///////////////////////////////////////////////////
+    // Here is for EleEle scenario                   //
+    ///////////////////////////////////////////////////
+    // Step 0. Trigger requirement
+    // Step 1. Lepton requirement & Di-Lepton mass (> 20 GeV)cut & Third Lepton Veto & Charge opposite sign
+    // Step 2. Z-mass veto for Di-Muon & Di-Electron channels (< 76 GeV or > 106 GeV)
+    // Step 3. # of Jets >= 2
+    // Step 4. MET > 40 GeV (Di-Muon & Di-Electron)
+    // Step 5. 1 or more b tagged Jets (Loose working point for b-Tagging )
+
+    // Step 0. Trigger requirement
+    //   Most of codes are implemented in the member function TTBarXSec::ElectronTriggerRequirement
+    if( this->ElectronTriggerRequirement() != 1 ) continue;
+    nElecTrigEvent++;
+    if( Info_isData == false )          /// When the input file is MC,
+      if( strstr(infile, "TTBar_Sample") )
+        if( Channel_Idx != 22 )
+          continue; /// Check the channel index for dielectron trigger.
+
+    // Step 1. Lepton requirement
+    //     Among the events passed the trigger requirement, apply the electron requirement.
+    //  Most of processes are implemented as a member function TTBarXSec::ElectronRequirement
+    vector<int> selectedEleIdx;         // A container to store electron indices which are passed the electron requirement.
+    selectedEleIdx.clear();
+
+    for ( int i = 0; i < Elec_Count; ++i )
+    {
+      if( this->ElectronRequirement(i) ) selectedEleIdx.push_back(i);
+    }
+    if( selectedEleIdx.size() != 2 ) continue; // Step 1. Third lepton veto
+
+    // Step 1. Di-lepton mass cut, third lepton veto and charge opposite sign check.
+    double q1, q2;                      // Electron charges
+    TLorentzVector dilep;               // Dilepton TLorentzVector
+
+    q1 = Elec_Charge->at( selectedEleIdx.at(0) );
+    q2 = Elec_Charge->at( selectedEleIdx.at(1) );
+    TLorentzVector* ele_1 = (TLorentzVector*)Elec->At(selectedEleIdx.at(0));
+    TLorentzVector* ele_2 = (TLorentzVector*)Elec->At(selectedEleIdx.at(1));
+    dilep = *ele_1 + *ele_2;
+
+    if( dilep.M() < 20 ) continue;                    // Step 1. Di-Lepton mass (> 20 GeV) cut
+    if( q1 * q2 > 0 ) continue;                       // Step 1. Opposite charge cut
+    if( dilep.M() > 76 && dilep.M() < 106) continue;  // Step 2. Z-mass veto for dielectron channel
+    nDilep++;
+
+    // Step 3. Jet selection and jet cleaning process
+    vector<int> selectedJetIdx;                       // A container to store selected jet indices.
+    selectedJetIdx.clear();
+
+    for( int i = 0; i < Jet_Count; i++)
+    {
+      if( !( this->JetRequirement(i) ) ) continue;    // Select jets satisfying jet requirements.
+      if( !( this->IsClearJet(i) ) ) continue;
+      selectedJetIdx.push_back(i);
+    }
+    nJet++;
+
+    if( !( selectedJetIdx.size() >= 2 ) ) continue;          // Step 3. # of Jets >= 2
+
+    TLorentzVector* met = (TLorentzVector*)MET->At(0);
+    if( !( met->Pt() > 40 ) ) continue;                    // Step 4. MET > 40 GeV
+    nMET++;
+
+    vector<int> bTaggedJetIdx;
+    bTaggedJetIdx.clear();
+    //for( int i = 0; i < cleanJetIdx.size(); i++)    // Step 5. 1 or more b tagged Jets (Loose working point for b-Tagging)
+    for( int i = 0; i < selectedJetIdx.size(); i++ )
+    {
+      if( !( Jet_bDisc->at(i) <= 0.605 ) ) continue;
+      //else bTaggedJetIdx.push_back( cleanJetIdx.at(i) );
+      else bTaggedJetIdx.push_back( selectedJetIdx.at(i) );
+    }
+    if( bTaggedJetIdx.size() < 1 ) continue;
+
+    nEle++;
+
+    FillHisto( hElEl_ElPt,      ele_1->Pt(),           evt_weight_ );
+    FillHisto( hElEl_ElEnergy,  ele_1->Energy(),       evt_weight_ );
+    FillHisto( hElEl_ElEta,     ele_1->Eta(),          evt_weight_ );
+    FillHisto( hElEl_ElPhi,     ele_1->Phi(),          evt_weight_ );
+    FillHisto( hElEl_ElInvMass, dilep.M(),             evt_weight_ );
+    FillHisto( hElEl_NJets,     selectedJetIdx.size(), evt_weight_ );
+    FillHisto( hElEl_NEl,       nEle,                  evt_weight_ );
+    // FillHisto(TH1F*, variable, eventweight)
+  }
+
+  /////////////////////////
+  /// end of event loop ///
+  /////////////////////////
+
+  printf("[ElEl] Total processed number of events: %lld\n", __tot_evt);
+  printf("[ElEl] Events with dielectron trigger: %lld\n", nElecTrigEvent);
+  printf("[ElEl] Selected dielectrons: %lld\n", nDilep);
+  printf("[ElEl] njet: %d\n", nJet);
+  printf("[ElEl] nmet: %d\n", nMET);
+  printf("[ElEl] Selected / Total = %d / %d = %f\n", nEle, __tot_evt, (float)nEle/(float)__tot_evt);
+}//end Loop function/*}}}*/
+
+void TTBarXSec::MuMuLoop()
+{/*{{{*/
+  if (fChain == 0) return;
+
+  unsigned int nEntries = fChain->GetEntriesFast();
+  unsigned int nBytes = 0;
+  unsigned int nb = 0;
+
+  ///My variables
+  unsigned int __tot_evt = 0;
+
+  ////////////////////////
+  /// start event loop ///
+  ////////////////////////
+
+  int nMu = 0;                       // Number of electrons which passed the electron requirement.
+  unsigned int nMuonTrigEvent = 0;
+
+  for (Long64_t jentry=0; jentry<nEntries;jentry++)
   {
     Long64_t ientry = LoadTree(jentry);
     if (ientry < 0)
@@ -51,7 +208,7 @@ void TTBarXSec::Loop()
       break;
     }
 
-    nb = fChain->GetEntry(jentry);   nbytes += nb;
+    nb = fChain->GetEntry(jentry);   nBytes += nb;
 
     if (jentry % 10000 == 0) printf("Event %lld\n", jentry); //%lld supports Long64_t
 
@@ -77,102 +234,8 @@ void TTBarXSec::Loop()
     if ( Filter_PV->at(0) == false ) {continue;}
 
     ///////////////////////////////////////////////////
-    // Here is for MuMu scenario                     //
-    ///////////////////////////////////////////////////
-    if( this->MuonTriggerRequirement() == 1 ) // Step 0. Trigger requirement/*{{{*/
-    {
-      if( Info_isData == false )
-      {
-        if( strstr(infile, "TTBar_Sample") )
-        {
-          if( Channel_Idx != 26 )
-          {
-            //cout << "return 0 no matching index" << endl;
-            continue;
-          }
-        }
-      }
-
-      int nMuon = 0;
-      TLorentzVector diMuon;
-      TLorentzVector leadingMuon;
-
-      vector<int> selectedMuonIdx;
-      selectedMuonIdx.clear();
-
-      for ( int i = 0; i < Muon_Count; ++i )
-      {
-        if( this->MuonRequirement(i) )                      // Step 1. Lepton requirement
-        {
-          selectedMuonIdx.push_back(i);
-          nMuon++;
-        }
-      }
-
-      for( int i = 0; i < nMuon; ++i )
-      {
-        for( int j = i+1; j < nMuon; ++j)
-        {
-          TLorentzVector* mu_i = (TLorentzVector*)Muon->At(selectedMuonIdx.at(i));
-          TLorentzVector* mu_j = (TLorentzVector*)Muon->At(selectedMuonIdx.at(j));
-          diMuon = *mu_i + *mu_j;
-          //cout << Form("[%d, %d] / %f GeV", selectedMuonIdx.at(i), selectedMuonIdx.at(j), diMuon.M()) << endl;
-          if( diMuon.M() < 20 ) continue;
-          if( Muon_Charge->at( selectedMuonIdx.at(i) ) * Muon_Charge->at( selectedMuonIdx.at(j) ) != -1 ) continue;
-          if( nMuon >= 3 ) continue;
-          if( diMuon.M() > 76 && diMuon.M() < 106 ) continue;
-        }
-      }
-
-      // Step 3. Jet selection and jet cleaning process
-      vector<int> selectedJetIdx;
-      selectedJetIdx.clear();
-      for( int i = 0; i < Jet_Count; i++ )
-      {
-        if( this->JetRequirement(i) ) selectedJetIdx.push_back(i);
-      }
-
-      vector<int> cleanJetIdx;
-      cleanJetIdx.clear();
-      for( int i = 0; i < selectedJetIdx.size(); i++ )
-      {
-        if( this->IsClearJet( selectedJetIdx.at(i) ) != true ) continue;
-        else
-        {
-          cleanJetIdx.push_back( selectedJetIdx.at(i) );
-        }
-      }
-
-      if( cleanJetIdx.size() < 2 ) continue;
-      TLorentzVector* met = (TLorentzVector*)MET->At(0);
-      if( met->Pt() < 40 ) continue;                       // Step 4. MET > 40 GeV
-
-      vector<int> bTaggedJetIdx;
-      bTaggedJetIdx.clear();
-      for( int i = 0; i < cleanJetIdx.size(); i++ )
-      {
-        if( Jet_bDisc->at(i) >= 0.605 ) continue;
-        else bTaggedJetIdx.push_back( cleanJetIdx.at(i) );
-      }
-      if( bTaggedJetIdx.size()  < 1 ) continue;
-
-      if( nMuon != 0 )
-      {
-        leadingMuon = *(TLorentzVector*)Muon->At( selectedMuonIdx.at(0) );
-        FillHisto(hMuMu_MuonPt, leadingMuon.Pt(), evt_weight_);
-        FillHisto(hMuMu_MuonEnergy, leadingMuon.Energy(), evt_weight_);
-        FillHisto(hMuMu_MuonEta, leadingMuon.Eta(), evt_weight_);
-        FillHisto(hMuMu_MuonPhi, leadingMuon.Phi(), evt_weight_);
-      }
-      FillHisto(hMuMu_MuonInvMass, diMuon.M(), evt_weight_);
-      FillHisto(hMuMu_NJets, cleanJetIdx.size(), evt_weight_);
-      FillHisto(hMuMu_NMuon, nMuon, evt_weight_);
-    }/*}}}*/
-
-    ///////////////////////////////////////////////////
     // Here is for EleEle scenario                   //
     ///////////////////////////////////////////////////
-    /*{{{*/
     // Step 0. Trigger requirement
     // Step 1. Lepton requirement & Di-Lepton mass (> 20 GeV)cut & Third Lepton Veto & Charge opposite sign
     // Step 2. Z-mass veto for Di-Muon & Di-Electron channels (< 76 GeV or > 106 GeV)
@@ -182,219 +245,232 @@ void TTBarXSec::Loop()
 
     // Step 0. Trigger requirement
     //     Most of codes are implemented in the member function TTBarXSec::ElectronTriggerRequirement
-    else if( this->ElectronTriggerRequirement() == 1 )
+    if( this->MuonTriggerRequirement() != 1 ) continue;
+    nMuonTrigEvent++;
+    if( Info_isData == false )          /// When the input file is MC,
+      {
+        if( strstr(infile, "TTBar_Sample") )
+        {
+          if( Channel_Idx != 26 ) continue; /// Check the channel index for dielectron trigger.
+        }
+      }
+
+    // Step 1. Lepton requirement
+    //     Among the events passed the trigger requirement, apply the electron requirement.
+    //  Most of processes are implemented as a member function TTBarXSec::ElectronRequirement
+    vector<int> selectedMuonIdx;         // A container to store electron indices which are passed the electron requirement.
+    selectedMuonIdx.clear();
+    for ( int i = 0; i < Muon_Count; ++i )
     {
-      if( Info_isData == false )          /// When the input file is MC,
-        {
-          if( Channel_Idx != 22 ) continue; /// Check the channel index for dielectron trigger.
-        }
+      if( IsMuonRequirementOK(i) ) selectedMuonIdx.push_back(i);
+    }
+    if( selectedMuonIdx.size() != 2 ) continue; // Step 1. Third lepton veto
 
-      // Step 1. Lepton requirement
-      //     Among the events passed the trigger requirement, apply the electron requirement.
-      //  Most of processes are implemented as a member function TTBarXSec::ElectronRequirement
-      int nEle = 0;                       /// Number of electrons which passed the electron requirement.
-      TLorentzVector dilep;               /// Dilepton TLorentzVector
-      TLorentzVector leadingElectron;
+    // Step 1. Di-lepton mass cut, third lepton veto and charge opposite sign check.
+    double q1, q2;                      // Electron charges
+    TLorentzVector dilep;               // Dilepton TLorentzVector
 
-      vector<int> selectedEleIdx;         /// A container to store electron indices which are passed the electron requirement.
-      selectedEleIdx.clear();
+    q1 = Muon_Charge->at( selectedMuonIdx.at(0) );
+    q2 = Muon_Charge->at( selectedMuonIdx.at(1) );
+    TLorentzVector* mu_1 = (TLorentzVector*)Muon->At(selectedMuonIdx.at(0));
+    TLorentzVector* mu_2 = (TLorentzVector*)Muon->At(selectedMuonIdx.at(1));
+    dilep = *mu_1 + *mu_2;
 
-      for ( int i = 0; i < Elec_Count; ++i )
-      {
-        if( this->ElectronRequirement(i) )
-        {
-          selectedEleIdx.push_back(i);
-          nEle++;
-        }
-      }
-      if( selectedEleIdx.size() >= 3 ) continue; // Step 1. Third lepton veto
+    if( dilep.M() < 20 ) continue;                                            // Step 1. Di-Lepton mass (> 20 GeV) cut
+    if( !( q1 * q2 < 0 ) ) continue;                                          // Step 1. Opposite charge cut
+    if( dilep.M() > 76 && dilep.M() < 106) continue;                          // Step 2. Z-mass veto for dielectron channel
 
-      /// Step 1. Di-lepton mass cut, third lepton veto and charge opposite sign check.
-      for( int i = 0; i < selectedEleIdx.size(); ++i )
-      {
-        for( int j = 0; j < selectedEleIdx.size(); ++j )
-        {
-          if( i == j ) continue;
-          if( i >  j ) continue;
-          TLorentzVector* ele_i = (TLorentzVector*)Elec->At(selectedEleIdx.at(i));
-          TLorentzVector* ele_j = (TLorentzVector*)Elec->At(selectedEleIdx.at(j));
-          dilep = *ele_i + *ele_j;
-          if( dilep.M() < 20 ) continue;                                            // Step 1. Di-Lepton mass (> 20 GeV) cut
-          if( Elec_Charge->at( selectedEleIdx.at(i) ) * Elec_Charge->at( selectedEleIdx.at(j) ) == 1 ) continue; // Step 1. Opposite charge cut
-          if( dilep.M() > 76 && dilep.M() < 106) continue;                          // Step 2. Z-mass veto
-          if( dilep.Pt() < 20) continue;
-        }
-      }
+    // Step 3. Jet selection and jet cleaning process
+    vector<int> selectedJetIdx;                               // A container to store selected jet indices.
+    selectedJetIdx.clear();
 
-      // Step 3. Jet selection and jet cleaning process
-      vector<int> selectedJetIdx;                               // A container to store selected jet indices.
-      selectedJetIdx.clear();
-      for( int i = 0; i < Jet_Count; i++)
-      {
-        if( this->JetRequirement(i) ) selectedJetIdx.push_back(i); // Select jets satisfying jet requirements.
-      }
+    for( int i = 0; i < Jet_Count; i++)
+    {
+      if( !( this->JetRequirement(i) ) ) continue; // Select jets satisfying jet requirements.
+      if( !( this->IsClearJet(i) ) ) continue;
+      selectedJetIdx.push_back(i);
+    }
 
-      vector<int> cleanJetIdx;
-      cleanJetIdx.clear();
-      for( int i = 0; i < selectedJetIdx.size(); i++ )
-      {
-        if( this->IsClearJet( selectedJetIdx.at(i) ) != true ) continue; // Jet cleaning process.
-        else
-        {
-          cleanJetIdx.push_back( selectedJetIdx.at(i) );
-        }
-      }
+    if( !( selectedJetIdx.size() >= 2 ) ) continue;                        // Step 3. # of Jets >= 2
 
-      if( cleanJetIdx.size() < 2 ) continue;                        // Step 3. # of Jets >= 2
-      TLorentzVector* met = (TLorentzVector*)MET->At(0);
-      if( met->Pt() < 40 ) continue;                       // Step 4. MET > 40 GeV
+    TLorentzVector* met = (TLorentzVector*)MET->At(0);
+    if( met->Pt() < 40 ) continue;                                // Step 4. MET > 40 GeV
 
-      vector<int> bTaggedJetIdx;
-      bTaggedJetIdx.clear();
-      for( int i = 0; i < cleanJetIdx.size(); i++)                  // Step 5. 1 or more b tagged Jets (Loose working point for b-Tagging)
-      {
-        if( Jet_bDisc->at(i) >= 0.605 ) continue;
-        else bTaggedJetIdx.push_back( cleanJetIdx.at(i) );
-      }
-      if( bTaggedJetIdx.size() < 1 ) continue;
+    vector<int> bTaggedJetIdx;
+    bTaggedJetIdx.clear();
+    for( int i = 0; i < selectedJetIdx.size(); i++)                  // Step 5. 1 or more b tagged Jets (Loose working point for b-Tagging)
+    {
+      if( Jet_bDisc->at(i) >= 0.605 ) continue;
+      else bTaggedJetIdx.push_back( selectedJetIdx.at(i) );
+    }
+    if( bTaggedJetIdx.size() < 1 ) continue;
 
-      if( nEle != 0 )
-      {
-        leadingElectron = *(TLorentzVector*)Elec->At( selectedEleIdx.at(0) );
-        FillHisto(hElEl_ElPt, leadingElectron.Pt(), evt_weight_);
-        FillHisto(hElEl_ElEnergy, leadingElectron.Energy(), evt_weight_);
-        FillHisto(hElEl_ElEta, leadingElectron.Eta(), evt_weight_);
-        FillHisto(hElEl_ElPhi, leadingElectron.Phi(), evt_weight_);
-      }
-      FillHisto(hElEl_ElInvMass, dilep.M(), evt_weight_);
-      FillHisto(hElEl_NJets, cleanJetIdx.size(), evt_weight_);
-      FillHisto(hElEl_NEl, nEle, evt_weight_); // FillHisto(TH1F*, variable, eventweight)
-    }/*}}}*/
+    nMu++;
+
+    FillHisto( hMuMu_MuonPt,      mu_1->Pt(),            evt_weight_ );
+    FillHisto( hMuMu_MuonEnergy,  mu_1->Energy(),        evt_weight_ );
+    FillHisto( hMuMu_MuonEta,     mu_1->Eta(),           evt_weight_ );
+    FillHisto( hMuMu_MuonPhi,     mu_1->Phi(),           evt_weight_ );
+    FillHisto( hMuMu_MuonInvMass, dilep.M(),             evt_weight_ );
+    FillHisto( hMuMu_NJets,       selectedJetIdx.size(), evt_weight_ );
+    FillHisto( hMuMu_NMuon,       nMu,                   evt_weight_ );
+    // FillHisto(TH1F*, variable, eventweight)
+  }
+
+  /////////////////////////
+  /// end of event loop ///
+  /////////////////////////
+
+  printf("[MuMu] Total processed number of events: %lld\n", __tot_evt);
+  printf("[MuMu] Events with dimuon trigger: %lld\n", nMuonTrigEvent);
+  printf("[MuMu] Selected dimuon events: %lld\n", nMu);
+  printf("[MuMu] Selected / Total = %f\n", (float)nMu/(float)__tot_evt);
+}//end Loop function/*}}}*/
+
+void TTBarXSec::ElMuLoop()
+{/*{{{*/
+  if (fChain == 0) return;
+
+  unsigned int nEntries = fChain->GetEntriesFast();
+  unsigned int nBytes = 0;
+  unsigned int nb = 0;
+
+  ///My variables
+  unsigned int __tot_evt = 0;
+
+  ////////////////////////
+  /// start event loop ///
+  ////////////////////////
+  for (Long64_t jentry=0; jentry<nEntries;jentry++)
+  {
+    Long64_t ientry = LoadTree(jentry);
+    if (ientry < 0)
+    {
+      printf("ERROR: Failed to load the tree!!!\n");
+      break;
+    }
+
+    nb = fChain->GetEntry(jentry);   nBytes += nb;
+
+    if (jentry % 10000 == 0) printf("Event %lld\n", jentry); //%lld supports Long64_t
+
+    __tot_evt++;
+
+    //////////////////////////////////////
+    /// start any calculation and cuts ///
+    //////////////////////////////////////
+
+    ////////////////////////////////////////
+    // Example of Event Weight            //
+    // (Only for MC Samples ...           //
+    // DO NOT APPLY EVENT WEIGHT TO DATA )//
+    ////////////////////////////////////////
+
+    double evt_weight_ = 1.0;
+    if( !Info_isData )
+      evt_weight_ = GetEventWeight();
+
+    /////////////////////////////////////////////
+    // Example of Vertex Filter (EventFillter) //
+    /////////////////////////////////////////////
+    if ( Filter_PV->at(0) == false ) {continue;}
 
     ///////////////////////////////////////////////////
     // Here is for EleMu scenario                    //
     ///////////////////////////////////////////////////
-    // Step 0. Trigger requirement/*{{{*/
+    // Step 0. Trigger requirement
     // Step 1. Lepton requirement & Di-Lepton mass (> 20 GeV)cut & Third Lepton Veto & Charge opposite sign
-    // Step 2. Z-mass veto for Di-Muon & Di-Electron channels (< 76 GeV or > 106 GeV)
+    // (Skip this for ElMu) Step 2. Z-mass veto for Di-Muon & Di-Electron channels (< 76 GeV or > 106 GeV)
     // Step 3. # of Jets >= 2
     // Step 4. MET > 40 GeV (Di-Muon & Di-Electron)
     // Step 5. 1 or more b tagged Jets (Loose working point for b-Tagging )
-    else if( this->MuonEleTriggerRequirement() == 1 )
-    {
-      //cout << "MuonEleTriggerRequirement == 1" << endl;
-      if( Info_isData == false )
-      {
+    if( MuonEleTriggerRequirement() != 1 ) continue;
+    if( Info_isData == false )
+      if( strstr(infile, "TTBar_Sample") )
         if( Channel_Idx != 22 )             // In case of MC input file, check channel index.
-        {
-          //cout << "return 0 no matching index" << endl;
           continue;
-        }
-      }
-      int nMuonEle = 0;
-      int nEle = 0;
-      int nMuon = 0;
-      int nJet = 0;
-      int nCleanJet = 0;
 
-      TLorentzVector leadingMuonInMuEl;
-      TLorentzVector leadingElectronInMuEl;
-      vector<int> selectedMuonIdx;
-      vector<int> selectedEleIdx;
-      selectedMuonIdx.clear();
-      selectedEleIdx.clear();
+    int nMuonEle = 0;
+    int nEle = 0;
+    int nMuon = 0;
+    int nJet = 0;
+    int nCleanJet = 0;
 
-      for( int i = 0; i < Elec_Count; ++i )
-      {
-        if( this->ElectronRequirement(i) )
-        {
-          selectedEleIdx.push_back(i);
-          nEle++;
-        }
-      }
+    TLorentzVector leadingMuonInMuEl;
+    TLorentzVector leadingElectronInMuEl;
+    vector<int> selectedMuonIdx;
+    vector<int> selectedEleIdx;
+    selectedMuonIdx.clear();
+    selectedEleIdx.clear();
 
-      for( int i = 0; i < Muon_Count; ++i )
-      {
-        if( this->MuonRequirement(i) )
-        {
-          selectedMuonIdx.push_back(i);
-          nMuon++;
-        }
-      }
-
-      for( int i = 0; i < nEle; i++ )
-      {
-        TLorentzVector* ele_i  = (TLorentzVector*)Elec->At(selectedEleIdx.at(i));
-        for( int j = 0; j < nMuon; j++ )
-        {
-          TLorentzVector dilep;
-          TLorentzVector* muon_j = (TLorentzVector*)Muon->At(selectedMuonIdx.at(j));
-          dilep = *ele_i + *muon_j;
-          //cout << Form("[%d, %d] / %f GeV", selectedEleIdx.at(i), selectedMuonIdx.at(j), dilep.M()) << endl;
-          if( dilep.M() < 20 ) continue;                                           // Step 1. Di-Lepton mass (> 20 GeV) cut
-          if( Elec_Charge->at( selectedEleIdx.at(i) ) * Muon_Charge->at( selectedMuonIdx.at(j) ) == 1 ) continue;
-          if( nEle + nMuon >= 3 ) continue;
-          if( dilep.M() > 76 && dilep.M() < 106 ) continue;
-        }
-      }
-
-      // Step 3. Jet selection and jet cleaning process
-      vector<int> selectedJetIdx;                           // A container to store selected jet indices.
-      selectedJetIdx.clear();
-      for( int i = 0; i < Jet_Count; i++)
-      {
-        if( this->JetRequirement(i) ) selectedJetIdx.push_back(i); // Select jets satisfying jet requirements.
-      }
-
-      vector<int> cleanJetIdx;                              // A container to store jets survived jet cleaning process.
-      cleanJetIdx.clear();
-      for( int i = 0; i < selectedJetIdx.size(); i++)
-      {
-        if( this->IsClearJet( selectedJetIdx.at(i) ) != true ) continue;    // Jet cleaning process.
-        else
-        {
-          cleanJetIdx.push_back( selectedJetIdx.at(i) );
-        }
-      }
-
-      if( cleanJetIdx.size() < 2 ) continue;                        // Step 3. # of Jets >= 2
-      TLorentzVector* met = (TLorentzVector*)MET->At(0);
-      //if( met->Pt() < 40 ) continue;                       // Step 4. MET > 40 GeV
-
-      vector<int> bTaggedJetIdx;
-      bTaggedJetIdx.clear();
-      for( int i = 0; i < cleanJetIdx.size(); i++)                  // Step 5. 1 or more b tagged Jets (Loose working point for b-Tagging)
-      {
-        if( Jet_bDisc->at( cleanJetIdx.at(i) ) <= 0.605 ) continue;
-        else bTaggedJetIdx.push_back( cleanJetIdx.at(i) );
-      }
-      if( bTaggedJetIdx.size() < 1 ) continue;
-
-      if( nMuon != 0 )
-      {
-        leadingMuonInMuEl = *(TLorentzVector*)Muon->At( selectedMuonIdx.at(0) );
-        FillHisto(hElMu_MuPt, leadingMuonInMuEl.Pt(), evt_weight_);
-        FillHisto(hElMu_MuEnergy, leadingMuonInMuEl.E(), evt_weight_);
-        FillHisto(hElMu_MuEta, leadingMuonInMuEl.Eta(), evt_weight_);
-        FillHisto(hElMu_MuPhi, leadingMuonInMuEl.Phi(), evt_weight_);
-      }
-      if( nEle != 0 )
-      {
-        leadingElectronInMuEl = *(TLorentzVector*)Elec->At( selectedEleIdx.at(0) );
-        FillHisto(hElMu_ElPt, leadingElectronInMuEl.Pt(), evt_weight_);
-        FillHisto(hElMu_ElEnergy, leadingElectronInMuEl.E(), evt_weight_);
-        FillHisto(hElMu_ElEta, leadingElectronInMuEl.Eta(), evt_weight_);
-        FillHisto(hElMu_ElPhi, leadingElectronInMuEl.Phi(), evt_weight_);
-      }
-      FillHisto(hElMu_NJets,  cleanJetIdx.size(),  evt_weight_);
-      FillHisto(hElMu_NMu, nMuon, evt_weight_);
-      FillHisto(hElMu_NEl, nEle, evt_weight_);
-    }/*}}}*/
-    else
+    for( int i = 0; i < Elec_Count; ++i )
     {
-      //cout << "Event: " << jentry << " - No good trigger in this event" << endl;
-      continue;
+      if( this->ElectronRequirement(i) )
+      {
+        selectedEleIdx.push_back(i);
+        nEle++;
+      }
     }
+    if( selectedEleIdx.size() != 1 ) continue;
+
+    for( int i = 0; i < Muon_Count; ++i )
+    {
+      if( this->IsMuonRequirementOK(i) )
+      {
+        selectedMuonIdx.push_back(i);
+        nMuon++;
+      }
+    }
+    if( selectedMuonIdx.size() != 1 ) continue;
+
+    double q1, q2;
+    TLorentzVector dilep;
+
+    q1 = Elec_Charge->at( selectedEleIdx.at(0) );
+    q2 = Muon_Charge->at( selectedMuonIdx.at(0) );
+    TLorentzVector* ele_i = (TLorentzVector*)Elec->At(selectedEleIdx.at(0));
+    TLorentzVector* muon_j = (TLorentzVector*)Muon->At(selectedMuonIdx.at(0));
+    dilep = *ele_i + *muon_j;
+
+    //cout << Form("[%d, %d] / %f GeV", selectedEleIdx.at(i), selectedMuonIdx.at(j), dilep.M()) << endl;
+    if( dilep.M() < 20 ) continue;                                           // Step 1. Di-Lepton mass (> 20 GeV) cut
+    if( Elec_Charge->at( selectedEleIdx.at(0) ) * Muon_Charge->at( selectedMuonIdx.at(0) ) == 1 ) continue;
+    if( selectedEleIdx.size() + selectedMuonIdx.size() != 2 ) continue;
+
+    // Step 3. Jet selection and jet cleaning process
+    vector<int> selectedJetIdx;                           // A container to store selected jet indices.
+    selectedJetIdx.clear();
+    for( int i = 0; i < Jet_Count; i++)
+    {
+      if( !( this->JetRequirement(i) ) ) continue; // Select jets satisfying jet requirements.
+      if( !( this->IsClearJet(i) ) ) continue;
+      selectedJetIdx.push_back(i);
+    }
+
+    if( selectedJetIdx.size() < 2 ) continue;                        // Step 3. # of Jets >= 2
+
+    vector<int> bTaggedJetIdx;
+    bTaggedJetIdx.clear();
+    for( int i = 0; i < selectedJetIdx.size(); i++)                  // Step 5. 1 or more b tagged Jets (Loose working point for b-Tagging)
+    {
+      if( Jet_bDisc->at( selectedJetIdx.at(i) ) <= 0.605 ) continue;
+      else bTaggedJetIdx.push_back( selectedJetIdx.at(i) );
+    }
+    if( bTaggedJetIdx.size() < 1 ) continue;
+
+    leadingMuonInMuEl = *(TLorentzVector*)Muon->At( selectedMuonIdx.at(0) );
+    FillHisto(hElMu_MuPt, leadingMuonInMuEl.Pt(), evt_weight_);
+    FillHisto(hElMu_MuEnergy, leadingMuonInMuEl.E(), evt_weight_);
+    FillHisto(hElMu_MuEta, leadingMuonInMuEl.Eta(), evt_weight_);
+    FillHisto(hElMu_MuPhi, leadingMuonInMuEl.Phi(), evt_weight_);
+    leadingElectronInMuEl = *(TLorentzVector*)Elec->At( selectedEleIdx.at(0) );
+    FillHisto(hElMu_ElPt, leadingElectronInMuEl.Pt(), evt_weight_);
+    FillHisto(hElMu_ElEnergy, leadingElectronInMuEl.E(), evt_weight_);
+    FillHisto(hElMu_ElEta, leadingElectronInMuEl.Eta(), evt_weight_);
+    FillHisto(hElMu_ElPhi, leadingElectronInMuEl.Phi(), evt_weight_);
+    FillHisto(hElMu_NJets,  selectedJetIdx.size(),  evt_weight_);
+    FillHisto(hElMu_NMu, nMuon, evt_weight_);
+    FillHisto(hElMu_NEl, nEle, evt_weight_);
   }//event loop
 
   /////////////////////////
@@ -403,10 +479,10 @@ void TTBarXSec::Loop()
 
   printf("Total processed number of events: %lld\n", __tot_evt);
 
-}//end Loop function
+}//end Loop function/*}}}*/
 
 /*
- * @brief
+ * @brief  Initialize TFile objects and call histogram declaration function
  */
 void TTBarXSec::Start()
 {/*{{{*/
@@ -484,7 +560,8 @@ void TTBarXSec::End()
 {/*{{{*/
   //NPositiveWeightEvents->Fill(nPositiveWeightEvent);
   //NNegativeWeightEvents->Fill(nNegativeWeightEvent);
-  fout->Write();
+  cout << "End processing..." << endl << endl; 
+  if( fout->Write() ) cout << fout->GetName() << " is written." << endl;
   fout->Close();
 }/*}}}*/
 
@@ -498,7 +575,7 @@ void TTBarXSec::SetOutputFileName(char *outname)
   outfile = outname;
 }/*}}}*/
 
-int TTBarXSec::ElectronTriggerRequirement()
+bool TTBarXSec::ElectronTriggerRequirement()
 {/*{{{*/
   int ptrigindex = 0;
   bool trigpass  = false;
@@ -511,9 +588,9 @@ int TTBarXSec::ElectronTriggerRequirement()
     }
   }
   if( ptrigindex > 0 ) trigpass = true;
-  if( trigpass == false ) return 0;
+  if( trigpass == false ) return false;
 
-  return 1;
+  return true;
 }/*}}}*/
 
 int TTBarXSec::ElectronRequirement(int i)
@@ -521,7 +598,7 @@ int TTBarXSec::ElectronRequirement(int i)
   TLorentzVector* ele_tag = (TLorentzVector*)Elec->At(i);
   if ( Elec_PFIsoRho03->at(i) > 0.0766 )                 return 0;
   if ( fabs( Elec_Supercluster_Eta->at(i) ) > 1.4442 &&
-      fabs( Elec_Supercluster_Eta->at(i) ) < 1.566 )    return 0;
+      fabs( Elec_Supercluster_Eta->at(i) ) < 1.566 )     return 0;
   if ( !Elec_SCB_Medium->at(i) )                         return 0;
   if ( Elec_Inner_Hit->at(i) > 1 )                       return 0;
   if ( !Elec_ChargeId_GsfPx->at(i) )                     return 0;
@@ -551,11 +628,11 @@ int TTBarXSec::MuonTriggerRequirement()
   for( unsigned int i = 0; i < Trigger_Name->size(); i++)
   {
     if( TString( Trigger_Name->at(i) ).Contains( "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v" )
-     || TString( Trigger_Name->at(i) ).Contains( "HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL_DZ_v" ) )
+        || TString( Trigger_Name->at(i) ).Contains( "HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL_DZ_v" ) )
     {
       if ( ( Trigger_isPass->at(i) )
-       && !( Trigger_isError->at(i) )
-       &&  ( Trigger_isRun->at(i) ) )
+          && !( Trigger_isError->at(i) )
+          &&  ( Trigger_isRun->at(i) ) )
       {
         ptrigindex = ptrigindex+1;
       }
@@ -567,15 +644,15 @@ int TTBarXSec::MuonTriggerRequirement()
   return trigpass;
 }/*}}}*/
 
-int TTBarXSec::MuonRequirement(int i)
+bool TTBarXSec::IsMuonRequirementOK(int i)
 {/*{{{*/
   TLorentzVector* mu_tag = (TLorentzVector*)Muon->At(i);
-  if ( Muon_PFIsodBeta04->at(i) > 0.12 ) return 0;
-  if ( !Muon_isTight->at(i) )            return 0;
-  if ( mu_tag->Pt() < 20 )               return 0;
-  if ( mu_tag->Eta() > 2.4 )             return 0;
+  if ( Muon_PFIsodBeta04->at(i) > 0.12 ) return false;
+  if ( !Muon_isTight->at(i) )            return false;
+  if ( mu_tag->Pt() < 20 )               return false;
+  if ( mu_tag->Eta() > 2.4 )             return false;
 
-  return 1;
+  return true;
 }/*}}}*/
 
 int TTBarXSec::MuonEleTriggerRequirement()
@@ -589,7 +666,7 @@ int TTBarXSec::MuonEleTriggerRequirement()
   for( unsigned int i = 0; i < Trigger_Name->size(); i++ )
   {
     if( TString( Trigger_Name->at(i) ).Contains( "HLT_Mu17_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_v" )
-        || TString( Trigger_Name->at(i) ).Contains( "HLT_Mu8_TrkIsoVVL_Ele17_CaloIdL_TrackIdL_IsoVL_v" ) )
+     || TString( Trigger_Name->at(i) ).Contains( "HLT_Mu8_TrkIsoVVL_Ele17_CaloIdL_TrackIdL_IsoVL_v" ) )
       if( ( Trigger_isPass->at(i) ) && !( Trigger_isError->at(i) ) && (Trigger_isRun->at(i) ) ){ ptrigindex++; }
   }
   if( ptrigindex > 0 ) trigpass = true;
@@ -601,7 +678,7 @@ int TTBarXSec::MuonEleTriggerRequirement()
 int TTBarXSec::JetRequirement(int i)
 {/*{{{*/
   if( Jet_PFId->at(i) < 1 ) return 0;
-
+  if( Jet_bDisc->at(i) <= 0.605 ) return 0;
   TLorentzVector* jet = (TLorentzVector*)Jet->At(i);
   if( jet->Pt() < 30. ) return 0;
   if( jet->Eta() > 2.4 ) return 0;
@@ -617,15 +694,35 @@ bool TTBarXSec::IsClearJet(int i)
   for(int j = 0; j < Elec_Count; j++)
   {
     TLorentzVector* elec = (TLorentzVector*)Elec->At(j);
-
-    if( jet->DeltaR(*elec) < 0.4 ) return false;
+    float absEta = fabs( elec->Eta() );
+    if( Elec_PFIsoRho03->at(j) >= 0.11  ) continue;
+    if( Elec_SCB_Veto->at(j)   != true  ) continue;
+    if( elec->Pt()             <= 20.   ) continue;
+    if( absEta                 >= 2.5   ) continue;
+    if( absEta                 <= 1.479 ) continue;
+    {
+      if( fabs( Elec_Track_GsfdXY->at(j) ) > 0.060279 ) continue;
+      if( Elec_Conversion->at(j) != true )              continue;
+      if( Elec_Inner_Hit->at(j) != 2. )                 continue;
+    }
+    if( absEta > 1.479 && absEta < 2.5 )
+    {
+      if( fabs( Elec_Track_GsfdXY->at(j) ) > 0.273097 ) continue;
+      if( Elec_Conversion->at(j) != true )              continue;
+      if( Elec_Inner_Hit->at(j) != 3. )                 continue;
+    }
+    if( jet->DeltaR(*elec) < 0.4 )                      return false;
   }
   // Is there any muon near the jet?
   for(int j = 0; j < Muon_Count; j++)
   {
     TLorentzVector* muon = (TLorentzVector*)Muon->At(j);
+    if( Muon_PFIsodBeta03->at(j) >= 0.1 ) continue;
+    if( Muon_isLoose->at(j) != true )     continue;
+    if( muon->Pt() <= 20. )               continue;
+    if( muon->Eta() >= 2.4 )              continue;
 
-    if( jet->DeltaR(*muon) < 0.4 ) return false;
+    if( jet->DeltaR(*muon) < 0.4 )        return false;
   }
 
   return true;
