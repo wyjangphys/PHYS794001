@@ -9,6 +9,6 @@
   ./job_submit.sh ZZ.list
   ./job_submit.sh ST_tW_antitop.list
   ./job_submit.sh ST_tW_top.list
-  ./job_submit.sh MuMu.list
-  ./job_submit.sh ElEl.list
-  ./job_submit.sh MuEl.list
+  ./job_submit_data.sh MuMu.list
+  ./job_submit_data.sh ElEl.list
+  ./job_submit_data.sh MuEl.list

@@ -37,12 +37,12 @@ class TTBarXSec : public SSBTree
       void    SetInputFileName(char* inputname);
       void    SetOutputFileName(char *outname);
       void    DeclareHistos();
-      int     ElectronRequirement(int i);
+      bool    ElectronRequirement(int i);
       bool    ElectronTriggerRequirement();
-      bool    IsMuonRequirementOK(int i);
+      bool    MuonRequirement(int i);
       int     MuonTriggerRequirement();
       int     MuonEleTriggerRequirement();
-      int     JetRequirement(int i);
+      bool    JetRequirement(int i);
       bool    IsClearJet(int i);
       double  GetEventWeight();
       void    SetWeightSignCounter();

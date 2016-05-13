@@ -105,7 +105,7 @@ do
   OUTFILE=$OUTDIR${irun#$TARGETDIR}
 
   # Execute job submission command.
-  echo /usr/bin/qsub -q knu -o $LOGFILE -e $ERRFILE -l walltime=24:00:00,cput=24:00:00 -N $irun -F \"$irun $OUTFILE\" $RUNSCRIPT
+  #echo /usr/bin/qsub -q knu -o $LOGFILE -e $ERRFILE -l walltime=24:00:00,cput=24:00:00 -N $irun -F \"$irun $OUTFILE\" $RUNSCRIPT
   /usr/bin/qsub -q knu \
     -o $LOGFILE -e $ERRFILE \
     -l walltime=24:00:00,cput=24:00:00 \
